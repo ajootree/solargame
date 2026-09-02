@@ -271,6 +271,11 @@
     object-fit:contain; filter:drop-shadow(0 2px 5px rgba(0,0,0,.72));
   }
   .planet-photo.saturn{ width:min(64px, 96%); }
+  .body-photo{
+    display:block; width:min(46px, 82%); height:40px; margin-bottom:2px;
+    object-fit:contain; filter:drop-shadow(0 2px 5px rgba(0,0,0,.72));
+  }
+  .body-photo.sun{ filter:drop-shadow(0 0 7px rgba(255,224,139,.5)); }
   .modal-planet-photo{
     width:42px; height:42px; object-fit:contain; vertical-align:middle;
     margin-right:5px; filter:drop-shadow(0 3px 6px rgba(0,0,0,.5));
@@ -279,21 +284,6 @@
     width:32px; height:32px; object-fit:contain; vertical-align:middle;
     margin-right:8px; filter:drop-shadow(0 2px 4px rgba(0,0,0,.35));
   }
-  .body-mini{
-    width: 28px; height:28px; border-radius:50%; margin-bottom:3px;
-    box-shadow: inset -8px -6px 10px rgba(0,0,0,.45), inset 4px 3px 7px rgba(255,255,255,.25), 0 0 10px rgba(255,255,255,.12);
-    position: relative;
-  }
-  .body-mini.ring::after{
-    content:""; position:absolute; left:-8px; top:9px; width:44px; height:10px;
-    border:2px solid rgba(236,226,190,.78); border-radius:50%;
-    transform: rotate(-15deg);
-  }
-  .body-sun{ background: radial-gradient(circle at 35% 30%, #fff7a8, #f6b73c 45%, #db5b1f 100%); box-shadow: 0 0 18px rgba(246,183,60,.65), inset -8px -6px 10px rgba(120,49,14,.35); }
-  .body-moon{ background: radial-gradient(circle at 35% 28%, #f2f2f2, #b8b8b8 50%, #777 100%); }
-  .body-asteroid{ border-radius:42% 54% 45% 58%; background: radial-gradient(circle at 35% 28%, #c2b5a6, #7f7166 55%, #4b423c 100%); }
-  .body-comet{ background: radial-gradient(circle at 60% 40%, #f3ffff, #7ddaf4 45%, #3187a6 100%); }
-
   .board-center{
     grid-column: 2 / 10; grid-row: 2 / 7;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -377,6 +367,10 @@
   .journal-empty{ font-size: 13px; color:var(--star-dim); line-height:1.7; }
   .planet-visual{
     display:block; width:min(260px, 86%); height:150px; margin:6px auto 16px;
+    object-fit:contain; filter:drop-shadow(0 8px 14px rgba(0,0,0,.45));
+  }
+  .body-visual{
+    display:block; width:min(240px, 82%); height:138px; margin:6px auto 16px;
     object-fit:contain; filter:drop-shadow(0 8px 14px rgba(0,0,0,.45));
   }
   .card-field{ margin-bottom: 10px; }
@@ -661,16 +655,16 @@ const PLANETS = [
 ];
 
 const CELESTIALS = [
-  {key:'sun', name:'태양', icon:'☀️', hex:'#F6B73C', category:'별(항성)',
+  {key:'sun', name:'태양', icon:'☀️', image:'assets/bodies/sun.jpg', hex:'#F6B73C', category:'별(항성)',
    colorText:'노란색, 붉은색', ring:false,
    desc:'스스로 빛을 내며 태양계의 중심에 있는 천체이다.'},
-  {key:'moon', name:'달', icon:'🌙', hex:'#C8C8C8', category:'위성',
+  {key:'moon', name:'달', icon:'🌙', image:'assets/bodies/moon.jpg', hex:'#C8C8C8', category:'위성',
    colorText:'회색', surface:'암석으로 되어 있다.', ring:false,
    desc:'지구 주위를 공전하는 위성이다.'},
-  {key:'asteroid', name:'소행성', icon:'🪨', hex:'#8B7E72', category:'작은 천체',
+  {key:'asteroid', name:'소행성', icon:'🪨', image:'assets/bodies/asteroid.jpg', hex:'#8B7E72', category:'작은 천체',
    colorText:'회색, 갈색', surface:'암석으로 되어 있다.', ring:false,
    desc:'화성과 목성 사이에 특히 많이 분포하며 행성보다 크기가 작은 편이다.'},
-  {key:'comet', name:'혜성', icon:'☄️', hex:'#9DDDF6', category:'작은 천체',
+  {key:'comet', name:'혜성', icon:'☄️', image:'assets/bodies/comet.jpg', hex:'#9DDDF6', category:'작은 천체',
    colorText:'밝은 푸른색', surface:'먼지와 가스로 이루어졌다.', ring:false,
    desc:'태양과 가까워지면 꼬리가 생기는 천체이다.'},
 ];
@@ -1257,8 +1251,8 @@ function tileVisualHTML(d){
     return `<img class="planet-photo${saturnClass}" src="${d.planet.image}" alt="${d.planet.name} 실제 관측 사진">`;
   }
   if(d.type === 'body'){
-    const ring = d.body.ring ? ' ring' : '';
-    return `<div class="body-mini body-${d.body.key}${ring}"></div>`;
+    const sunClass = d.body.key === 'sun' ? ' sun' : '';
+    return `<img class="body-photo${sunClass}" src="${d.body.image}" alt="${d.body.name} 실제 관측 사진">`;
   }
   return `<div class="ti">${d.icon}</div>`;
 }
@@ -1689,7 +1683,9 @@ function showArrivalNotice(p, d, isDouble){
   playSound('arrival');
   const arrivalVisual = d.type === 'planet'
     ? `<img class="modal-planet-photo" src="${d.planet.image}" alt="${d.planet.name}">`
-    : d.icon;
+    : d.type === 'body'
+      ? `<img class="modal-planet-photo" src="${d.body.image}" alt="${d.body.name}">`
+      : d.icon;
   showModal(`
     <h3>${arrivalVisual} ${d.name} 도착</h3>
     <p>${arrivalText(p, d)}</p>
@@ -2164,6 +2160,7 @@ function showBodyObservationRecord(p, body, onDone){
   const features = ['스스로 빛을 낸다','지구 주위를 돈다','화성과 목성 사이에 많이 있다','태양 가까이에서 꼬리가 생긴다'];
   showModal(`
     <h3>${body.icon} ${body.name} 첫 관측 기록</h3>
+    <img class="body-visual" src="${body.image}" alt="${body.name} 실제 관측 사진">
     <p>알맞은 버튼을 골라 ${body.name} 관측일지를 완성하세요.</p>
 
     <div class="card-field"><div class="lb">어떤 천체인가요?</div></div>
@@ -2228,6 +2225,7 @@ function showBodyTile(p, d, isDouble){
   const body = d.body;
   showModal(`
     <h3>${body.icon} ${body.name} 관측</h3>
+    <img class="body-visual" src="${body.image}" alt="${body.name} 실제 관측 사진">
     <p>${body.desc}</p>
     <div class="modal-amount pos">+80G</div>
     <p style="margin-bottom:10px;">관측 카드에 특징을 정리했습니다.</p>

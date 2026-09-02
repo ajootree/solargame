@@ -10,3 +10,10 @@ Planet photographs used in `assets/planets` were downloaded from Wikimedia Commo
 - Saturn: [Saturn during Equinox](https://commons.wikimedia.org/wiki/File:Saturn_during_Equinox.jpg) - NASA/JPL/Space Science Institute
 - Uranus: [Uranus2](https://commons.wikimedia.org/wiki/File:Uranus2.jpg) - NASA/JPL
 - Neptune: [Neptune Full](https://commons.wikimedia.org/wiki/File:Neptune_Full.jpg) - NASA/JPL
+
+## Other Solar System objects
+
+- Sun: [The Sun in white light](https://commons.wikimedia.org/wiki/File:The_Sun_in_white_light.jpg) - Matúš Motlo, CC BY-SA 4.0
+- Moon: [Moon nearside LRO](https://commons.wikimedia.org/wiki/File:Moon_nearside_LRO.jpg) - NASA/GSFC/Arizona State University
+- Asteroid: [Asteroid Bennu](https://commons.wikimedia.org/wiki/File:BennuAsteroid.jpg) - NASA/Goddard/University of Arizona
+- Comet: [Comet 67P on 7 August](https://commons.wikimedia.org/wiki/File:Comet_67P_on_7_August_(b)_(14894461396).jpg) - ESA/Rosetta/MPS for OSIRIS Team, CC BY-SA 3.0 IGO
