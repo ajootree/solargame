@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>태양계 관측 원정대</title>
+<title>밤하늘 관찰 원정대</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
@@ -266,24 +266,29 @@
     text-shadow: 0 1px 2px rgba(0,0,0,.7);
   }
   .tile .price-tag{ font-size: 8.5px; color: var(--amber); }
-  .planet-mini, .body-mini{
+  .planet-photo{
+    display:block; width:min(46px, 82%); height:40px; margin-bottom:2px;
+    object-fit:contain; filter:drop-shadow(0 2px 5px rgba(0,0,0,.72));
+  }
+  .planet-photo.saturn{ width:min(64px, 96%); }
+  .modal-planet-photo{
+    width:42px; height:42px; object-fit:contain; vertical-align:middle;
+    margin-right:5px; filter:drop-shadow(0 3px 6px rgba(0,0,0,.5));
+  }
+  .choice-planet-photo{
+    width:32px; height:32px; object-fit:contain; vertical-align:middle;
+    margin-right:8px; filter:drop-shadow(0 2px 4px rgba(0,0,0,.35));
+  }
+  .body-mini{
     width: 28px; height:28px; border-radius:50%; margin-bottom:3px;
     box-shadow: inset -8px -6px 10px rgba(0,0,0,.45), inset 4px 3px 7px rgba(255,255,255,.25), 0 0 10px rgba(255,255,255,.12);
     position: relative;
   }
-  .planet-mini.ring::after, .body-mini.ring::after{
+  .body-mini.ring::after{
     content:""; position:absolute; left:-8px; top:9px; width:44px; height:10px;
     border:2px solid rgba(236,226,190,.78); border-radius:50%;
     transform: rotate(-15deg);
   }
-  .planet-mercury{ background: radial-gradient(circle at 35% 28%, #d4d0c9, #8b8680 45%, #56524e 100%); }
-  .planet-venus{ background: radial-gradient(circle at 35% 28%, #fff0a8, #d8ad43 48%, #8f6425 100%); }
-  .planet-earth{ background: radial-gradient(circle at 35% 28%, #dff8ff 0 9%, #3b8ee4 10% 44%, #27794e 45% 58%, #113b8f 100%); }
-  .planet-mars{ background: radial-gradient(circle at 35% 28%, #f0a071, #b6462c 53%, #5f241b 100%); }
-  .planet-jupiter{ background: repeating-linear-gradient(0deg, #8a5339 0 12%, #e2b782 13% 25%, #7f4936 26% 34%, #f1d29a 35% 47%, #a86642 48% 60%); }
-  .planet-saturn{ background: repeating-linear-gradient(0deg, #9c7445 0 16%, #e1c98c 17% 36%, #b89059 37% 52%, #f0dda7 53% 70%); }
-  .planet-uranus{ background: radial-gradient(circle at 35% 28%, #d6fff9, #76d8cf 55%, #2d8a91 100%); }
-  .planet-neptune{ background: radial-gradient(circle at 35% 28%, #a9c9ff, #3f68cf 55%, #183174 100%); }
   .body-sun{ background: radial-gradient(circle at 35% 30%, #fff7a8, #f6b73c 45%, #db5b1f 100%); box-shadow: 0 0 18px rgba(246,183,60,.65), inset -8px -6px 10px rgba(120,49,14,.35); }
   .body-moon{ background: radial-gradient(circle at 35% 28%, #f2f2f2, #b8b8b8 50%, #777 100%); }
   .body-asteroid{ border-radius:42% 54% 45% 58%; background: radial-gradient(circle at 35% 28%, #c2b5a6, #7f7166 55%, #4b423c 100%); }
@@ -371,14 +376,8 @@
   .journal h2{ font-family:'Jua'; margin: 0; font-size: 21px; color:var(--star); }
   .journal-empty{ font-size: 13px; color:var(--star-dim); line-height:1.7; }
   .planet-visual{
-    width: 132px; height:132px; border-radius:50%; margin: 6px auto 16px;
-    box-shadow: inset -22px -15px 28px rgba(0,0,0,.42), inset 8px 7px 18px rgba(255,255,255,.2), 0 8px 24px rgba(0,0,0,.28);
-    position: relative;
-  }
-  .planet-visual.ring::after{
-    content:""; display:block; position:absolute; top:47px; left:-34px;
-    width: 200px; height: 38px; border: 5px solid rgba(238,228,190,.72);
-    border-radius: 50%; transform: rotate(-14deg); opacity:.8;
+    display:block; width:min(260px, 86%); height:150px; margin:6px auto 16px;
+    object-fit:contain; filter:drop-shadow(0 8px 14px rgba(0,0,0,.45));
   }
   .card-field{ margin-bottom: 10px; }
   .card-field .lb{ font-size: 12px; color:#8a7c52; font-weight:700; margin-bottom:2px;}
@@ -564,11 +563,11 @@
 <div class="app">
   <header class="masthead">
     <div>
-      <h1>🛰️ 태양계 관측 원정대</h1>
-      <p>교과서 「과학」 태양계 여행 말판 놀이 · 디지털 확장판</p>
+      <h1>🛰️ 밤하늘 관찰 원정대</h1>
+      <p>교과서 「과학」 1단원 밤하늘 관찰 · 태양계 말판 놀이</p>
     </div>
     <div class="masthead-actions">
-      <div class="badge-log-no">EXPEDITION LOG · 3단원 태양계와 별</div>
+      <div class="badge-log-no">EXPEDITION LOG · 1단원 밤하늘 관찰</div>
       <button type="button" class="sound-toggle" id="soundToggle" aria-label="소리 끄기" title="소리 끄기">🔊</button>
     </div>
   </header>
@@ -643,21 +642,21 @@ const PASS_START_BONUS = 300;
 const BODY_REWARD = 80;
 
 const PLANETS = [
-  {key:'mercury', name:'수성', color:'var(--c-mercury)', hex:'#9C9691', icon:'●', ring:false,
+  {key:'mercury', name:'수성', color:'var(--c-mercury)', hex:'#9C9691', icon:'●', image:'assets/planets/mercury.png', ring:false,
    order:1, composition:'암석', colorText:'회색', surface:'딱딱한 땅으로 되어 있다.', desc:'태양과 가장 가깝고 표면에 충돌 구덩이가 많다.', price:300, toll:70},
-  {key:'venus', name:'금성', color:'var(--c-venus)', hex:'#E4C15C', icon:'●', ring:false,
+  {key:'venus', name:'금성', color:'var(--c-venus)', hex:'#E4C15C', icon:'●', image:'assets/planets/venus.jpg', ring:false,
    order:2, composition:'암석', colorText:'노란색', surface:'딱딱한 땅으로 되어 있다.', desc:'두꺼운 대기로 둘러싸여 있다.', price:350, toll:80},
-  {key:'earth', name:'지구', color:'var(--c-earth)', hex:'#4C8CE0', icon:'●', ring:false,
+  {key:'earth', name:'지구', color:'var(--c-earth)', hex:'#4C8CE0', icon:'●', image:'assets/planets/earth.jpg', ring:false,
    order:3, composition:'암석', colorText:'파란색, 초록색', surface:'딱딱한 땅으로 되어 있다.', desc:'물과 공기가 있고 바다와 육지로 구분된다.', price:400, toll:90},
-  {key:'mars', name:'화성', color:'var(--c-mars)', hex:'#C1502E', icon:'●', ring:false,
+  {key:'mars', name:'화성', color:'var(--c-mars)', hex:'#C1502E', icon:'●', image:'assets/planets/mars.jpg', ring:false,
    order:4, composition:'암석', colorText:'붉은색', surface:'딱딱한 땅으로 되어 있다.', desc:'우주 탐사선을 많이 보낸 행성이다.', price:450, toll:110},
-  {key:'jupiter', name:'목성', color:'var(--c-jupiter)', hex:'#C68B59', icon:'●', ring:true,
+  {key:'jupiter', name:'목성', color:'var(--c-jupiter)', hex:'#C68B59', icon:'●', image:'assets/planets/jupiter.jpg', ring:true,
    order:5, composition:'기체', colorText:'갈색, 연갈색', surface:'기체로 이루어졌다.', desc:'표면에 줄무늬와 크고 붉은 점이 있고, 희미한 고리가 있다.', price:550, toll:140},
-  {key:'saturn', name:'토성', color:'var(--c-saturn)', hex:'#DCC08C', icon:'●', ring:true,
+  {key:'saturn', name:'토성', color:'var(--c-saturn)', hex:'#DCC08C', icon:'●', image:'assets/planets/saturn.jpg', ring:true,
    order:6, composition:'기체', colorText:'옅은 갈색', surface:'기체로 이루어졌다.', desc:'크고 뚜렷한 고리가 있다.', price:650, toll:170},
-  {key:'uranus', name:'천왕성', color:'var(--c-uranus)', hex:'#7FD8CE', icon:'●', ring:true,
+  {key:'uranus', name:'천왕성', color:'var(--c-uranus)', hex:'#7FD8CE', icon:'●', image:'assets/planets/uranus.jpg', ring:true,
    order:7, composition:'기체', colorText:'청록색', surface:'기체로 이루어졌다.', desc:'고리가 희미하다.', price:750, toll:200},
-  {key:'neptune', name:'해왕성', color:'var(--c-neptune)', hex:'#3E63C9', icon:'●', ring:true,
+  {key:'neptune', name:'해왕성', color:'var(--c-neptune)', hex:'#3E63C9', icon:'●', image:'assets/planets/neptune.jpg', ring:true,
    order:8, composition:'기체', colorText:'파란색', surface:'기체로 이루어졌다.', desc:'표면에 검은 점이 있고 고리가 있다.', price:850, toll:230},
 ];
 
@@ -1229,7 +1228,7 @@ function renderBoard(){
   const center = document.createElement('div');
   center.className = 'board-center';
   center.innerHTML = `
-    <div class="center-title">🌌 태양계 관측 원정</div>
+    <div class="center-title">🌌 밤하늘 관찰 원정</div>
     <div class="game-status" id="gameStatus"></div>
     <div class="dice-row">
       <div class="die" id="die1">
@@ -1254,8 +1253,8 @@ function renderBoard(){
 
 function tileVisualHTML(d){
   if(d.type === 'planet'){
-    const ring = d.planet.ring ? ' ring' : '';
-    return `<div class="planet-mini planet-${d.planet.key}${ring}"></div>`;
+    const saturnClass = d.planet.key === 'saturn' ? ' saturn' : '';
+    return `<img class="planet-photo${saturnClass}" src="${d.planet.image}" alt="${d.planet.name} 실제 관측 사진">`;
   }
   if(d.type === 'body'){
     const ring = d.body.ring ? ' ring' : '';
@@ -1688,8 +1687,11 @@ function resolveTile(p, isDouble){
 function showArrivalNotice(p, d, isDouble){
   renderJournal(null);
   playSound('arrival');
+  const arrivalVisual = d.type === 'planet'
+    ? `<img class="modal-planet-photo" src="${d.planet.image}" alt="${d.planet.name}">`
+    : d.icon;
   showModal(`
-    <h3>${d.icon} ${d.name} 도착</h3>
+    <h3>${arrivalVisual} ${d.name} 도착</h3>
     <p>${arrivalText(p, d)}</p>
     <button class="btn btn-amber btn-block" id="arrivalNext">다음</button>
   `, {closable:false});
@@ -1939,7 +1941,7 @@ function showObservationRecord(p, planet, onDone){
   const selections = {order:null, composition:null, ring:null};
   showModal(`
     <h3>🔭 ${planet.name} 첫 관측 기록</h3>
-    <div class="planet-visual planet-${planet.key} ${planet.ring ? 'ring' : ''}"></div>
+    <img class="planet-visual" src="${planet.image}" alt="${planet.name} 실제 관측 사진">
     <p>버튼을 눌러 ${planet.name}의 특징을 직접 기록하세요.</p>
 
     <div class="card-field"><div class="lb">태양에서 몇 번째로 가까울까요?</div></div>
@@ -2477,7 +2479,7 @@ function resolveGoldenKey(p, card, isDouble){
     emptyPlanets.forEach(planet=>{
       const button = document.createElement('button');
       button.className = 'quiz-opt';
-      button.textContent = `${planet.icon} ${planet.name}`;
+      button.innerHTML = `<img class="choice-planet-photo" src="${planet.image}" alt="">${planet.name}`;
       button.onclick = ()=>{
         p.position = BOARD.findIndex(tile=>tile.type === 'planet' && tile.planet.key === planet.key);
         logMsg(`🌀 ${p.name}이(가) 웜홀을 타고 ${planet.name}(으)로 이동했습니다.`);
