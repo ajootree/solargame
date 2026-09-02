@@ -1,0 +1,2639 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>태양계 관측 원정대</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #0B1026;
+    --ink-2: #141B3C;
+    --ink-3: #1D2650;
+    --star: #E9ECFF;
+    --star-dim: #8B93C4;
+    --paper: #F3ECDA;
+    --paper-2: #EBE1C8;
+    --paper-line: #D8C9A3;
+    --amber: #E8A33D;
+    --amber-deep: #C97F1E;
+    --ok: #6FCF97;
+    --bad: #E0637A;
+
+    --c-mercury: #9C9691;
+    --c-venus: #E4C15C;
+    --c-earth: #4C8CE0;
+    --c-mars: #C1502E;
+    --c-jupiter: #C68B59;
+    --c-saturn: #DCC08C;
+    --c-uranus: #7FD8CE;
+    --c-neptune: #3E63C9;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  html{ height:100%; }
+  body{
+    background: radial-gradient(ellipse at 20% -10%, #1a2456 0%, var(--ink) 55%, #060812 100%);
+    color: var(--star);
+    font-family: 'Noto Sans KR', sans-serif;
+    height: 100%;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background-image:
+      radial-gradient(1.5px 1.5px at 10% 20%, rgba(255,255,255,.5) 50%, transparent 50%),
+      radial-gradient(1.5px 1.5px at 80% 10%, rgba(255,255,255,.4) 50%, transparent 50%),
+      radial-gradient(1px 1px at 60% 70%, rgba(255,255,255,.35) 50%, transparent 50%),
+      radial-gradient(1.5px 1.5px at 30% 85%, rgba(255,255,255,.4) 50%, transparent 50%),
+      radial-gradient(1px 1px at 90% 60%, rgba(255,255,255,.3) 50%, transparent 50%),
+      radial-gradient(1.5px 1.5px at 45% 40%, rgba(255,255,255,.3) 50%, transparent 50%);
+    background-size: 600px 600px;
+    pointer-events:none;
+    z-index:0;
+  }
+  .font-display{ font-family:'Jua', sans-serif; }
+
+  .app{
+    position:relative; z-index:1;
+    max-width: 1380px;
+    height: 100vh;
+    margin: 0 auto;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===== Header ===== */
+  .masthead{
+    display:flex; align-items:flex-end; justify-content:space-between;
+    gap: 16px; margin-bottom: 12px; flex-wrap: wrap; flex: none;
+    border-bottom: 1px solid rgba(233,236,255,.14);
+    padding-bottom: 10px;
+  }
+  .masthead h1{
+    font-family:'Jua', sans-serif;
+    font-size: clamp(19px, 2.4vw, 25px);
+    margin: 0 0 3px;
+    letter-spacing: .5px;
+  }
+  .masthead p{ margin:0; color: var(--star-dim); font-size: 12px; }
+  .badge-log-no{
+    font-size: 10px; letter-spacing: 1px; color: var(--star-dim);
+    border: 1px solid rgba(233,236,255,.2); border-radius: 999px;
+    padding: 3px 10px;
+  }
+  .masthead-actions{ display:flex; align-items:center; gap:8px; }
+  .sound-toggle{
+    width:36px; height:36px; border-radius:50%; border:1px solid rgba(233,236,255,.24);
+    background:rgba(233,236,255,.08); color:var(--star); font-size:18px;
+    display:grid; place-items:center; cursor:pointer;
+  }
+  .sound-toggle:hover{ background:rgba(233,236,255,.15); }
+  .sound-toggle.muted{ color:var(--star-dim); opacity:.7; }
+
+  /* ===== Layout: tablet-landscape first ===== */
+  .layout{
+    display:grid;
+    grid-template-columns: 286px minmax(0,1fr);
+    gap: 14px;
+    align-items: stretch;
+    flex: 1;
+    min-height: 0;
+  }
+  @media (max-width: 880px){
+    .app{ height: auto; min-height: 100vh; }
+    .layout{ grid-template-columns: 1fr; }
+  }
+
+  .side-panel{
+    display:flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+  }
+
+  /* ===== Player rail ===== */
+  .rail{
+    display:flex;
+    flex-direction: column;
+    gap:9px;
+    min-height: 0;
+    overflow-y: auto;
+    max-height: 39vh;
+  }
+  @media (max-width: 880px){
+    .side-panel{ min-height:auto; }
+    .rail{ flex-direction: row; flex-wrap: wrap; }
+    .rail .player-card{ flex: 1 1 45%; }
+  }
+  .player-card{
+    background: linear-gradient(180deg, var(--ink-3), var(--ink-2));
+    border: 1px solid rgba(233,236,255,.1);
+    border-radius: 12px;
+    padding: 10px 12px;
+    position: relative;
+    flex: none;
+    transition: box-shadow .25s ease, border-color .25s ease;
+  }
+  .player-card.active{
+    border-color: var(--player-color, var(--amber));
+    box-shadow: 0 0 0 1px var(--player-color, var(--amber)), 0 8px 24px -8px var(--player-color, var(--amber));
+  }
+  .player-card.bankrupt{ opacity:.4; filter: grayscale(1); }
+  .player-top{ display:flex; align-items:center; gap:8px; margin-bottom:5px;}
+  .player-dot{ width:12px; height:12px; border-radius:50%; background:var(--player-color); flex:none; box-shadow: 0 0 10px var(--player-color);}
+  .player-name{ font-weight:700; font-size:14.5px; flex:1; }
+  .player-turn-tag{
+    font-size:9.5px; color: var(--ink); background: var(--amber);
+    padding: 2px 7px; border-radius: 999px; font-weight:700; display:none;
+  }
+  .player-card.active .player-turn-tag{ display:inline-block; }
+  .player-finance{
+    display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:6px;
+    margin:7px 0 8px;
+  }
+  .finance-part{
+    min-width:0; padding:6px 8px; border:1px solid rgba(233,236,255,.1);
+    border-radius:6px; background:rgba(255,255,255,.045);
+  }
+  .finance-label{ display:block; color:var(--star-dim); font-size:10.5px; margin-bottom:2px; }
+  .finance-value{
+    display:block; font-family:'Jua'; font-size:17px; color:var(--star);
+    white-space:nowrap;
+  }
+  .finance-total{
+    grid-column:1 / -1; display:flex; align-items:baseline; justify-content:space-between;
+    gap:8px; padding:7px 9px; border:1px solid rgba(232,163,61,.42);
+    border-radius:6px; background:rgba(232,163,61,.12);
+  }
+  .finance-total .finance-label{ margin:0; color:#FFE29B; font-size:13px; font-weight:700; }
+  .finance-total .finance-value{ color:var(--amber); font-size:22px; }
+  .player-owned{ display:flex; flex-wrap:wrap; gap:4px; min-height: 16px;}
+  .owned-chip{
+    font-size: 10.8px; padding: 2px 6px; border-radius: 999px;
+    background: rgba(255,255,255,.08); color: var(--star);
+    border: 1px solid rgba(255,255,255,.1);
+  }
+  .player-status{ font-size: 10.5px; color: var(--bad); margin-top:4px; min-height:13px;}
+
+  .setup-box{
+    background: rgba(255,255,255,.03);
+    border: 1px dashed rgba(233,236,255,.25);
+    border-radius: 14px; padding: 16px;
+  }
+  .setup-box h3{ margin:0 0 10px; font-family:'Jua'; font-size:15px;}
+  .setup-row{ display:flex; align-items:center; gap:8px; margin-bottom:8px;}
+  .setup-row input[type=text]{
+    flex:1; background: #fff; border: 1px solid var(--paper-line);
+    border-radius: 8px; padding: 8px 11px; color: #2A2110; font-size:13.5px;
+  }
+  .setup-row input[type=text]::placeholder{ color: #9c8f68; }
+  .setup-row input[type=text]:focus{ outline: 2px solid var(--amber); outline-offset: 1px; }
+  .setup-row .swatch{ width:22px;height:22px;border-radius:50%; flex:none; border: 2px solid rgba(42,33,16,.3);}
+  .remove-player{
+    width:34px; height:34px; flex:none; border:1px solid rgba(42,33,16,.28);
+    border-radius:50%; background:rgba(42,33,16,.07); color:#6b6046;
+    font-size:20px; line-height:1; cursor:pointer;
+  }
+  .remove-player:hover{ background:#F4D2D9; color:#9E2840; }
+  .btn{
+    font-family:'Jua'; cursor:pointer; border:none; border-radius: 10px;
+    padding: 10px 16px; font-size: 14px; transition: transform .12s ease, filter .12s ease;
+  }
+  .btn:active{ transform: scale(.96); }
+  .btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .btn-amber{ background: linear-gradient(180deg, var(--amber), var(--amber-deep)); color: #2B1A00; }
+  .btn-amber:hover:not(:disabled){ filter:brightness(1.08); }
+  .btn-ghost{ background: rgba(42,33,16,.08); color:#2A2110; border: 1px solid rgba(42,33,16,.28); }
+  .btn-ghost:hover{ background: rgba(42,33,16,.15); }
+  .btn-block{ width:100%; }
+
+  /* ===== Board ===== */
+  .board-wrap{
+    background: radial-gradient(ellipse at center, #0E1740 0%, #070B1E 100%);
+    border: 1px solid rgba(233,236,255,.12);
+    border-radius: 16px;
+    padding: 8px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .board{
+    display:grid;
+    grid-template-columns: repeat(10, 1fr);
+    grid-template-rows: repeat(7, 1fr);
+    gap: 4px;
+    aspect-ratio: 11/7;
+    position: relative;
+    max-width: 100%;
+    max-height: 100%;
+  }
+  .tile{
+    border-radius: 7px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(233,236,255,.08);
+    position: relative;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    padding: 2px;
+    overflow:hidden;
+    cursor: default;
+  }
+  .tile .tk{ font-size: 9.6px; font-weight:700; text-align:center; line-height:1.16; color: var(--star); }
+  .tile .ti{ font-size: 15px; margin-bottom:1px; }
+  .tile.planet{ border-bottom: 3px solid var(--planet-color); }
+  .tile.planet .tk{ color: #fff; }
+  .tile.body{ background: rgba(111,207,151,.1); border-color: rgba(111,207,151,.35); }
+  .tile.quiz{ background: rgba(232,163,61,.1); border-color: rgba(232,163,61,.35); }
+  .tile.mission{ background: rgba(224,99,122,.12); border-color: rgba(224,99,122,.36); }
+  .tile.corner{ background: rgba(255,255,255,.06); }
+  .tile .owner-flag{
+    position:absolute; top:3px; right:3px; width:11px; height:11px; border-radius:50%;
+    box-shadow: 0 0 4px rgba(0,0,0,.6);
+  }
+  .tile .stage-badge{
+    position:absolute; top:2px; left:3px;
+    font-size: 8.5px; font-weight:900; color:#fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,.7);
+  }
+  .tile .price-tag{ font-size: 8.5px; color: var(--amber); }
+  .planet-mini, .body-mini{
+    width: 28px; height:28px; border-radius:50%; margin-bottom:3px;
+    box-shadow: inset -8px -6px 10px rgba(0,0,0,.45), inset 4px 3px 7px rgba(255,255,255,.25), 0 0 10px rgba(255,255,255,.12);
+    position: relative;
+  }
+  .planet-mini.ring::after, .body-mini.ring::after{
+    content:""; position:absolute; left:-8px; top:9px; width:44px; height:10px;
+    border:2px solid rgba(236,226,190,.78); border-radius:50%;
+    transform: rotate(-15deg);
+  }
+  .planet-mercury{ background: radial-gradient(circle at 35% 28%, #d4d0c9, #8b8680 45%, #56524e 100%); }
+  .planet-venus{ background: radial-gradient(circle at 35% 28%, #fff0a8, #d8ad43 48%, #8f6425 100%); }
+  .planet-earth{ background: radial-gradient(circle at 35% 28%, #dff8ff 0 9%, #3b8ee4 10% 44%, #27794e 45% 58%, #113b8f 100%); }
+  .planet-mars{ background: radial-gradient(circle at 35% 28%, #f0a071, #b6462c 53%, #5f241b 100%); }
+  .planet-jupiter{ background: repeating-linear-gradient(0deg, #8a5339 0 12%, #e2b782 13% 25%, #7f4936 26% 34%, #f1d29a 35% 47%, #a86642 48% 60%); }
+  .planet-saturn{ background: repeating-linear-gradient(0deg, #9c7445 0 16%, #e1c98c 17% 36%, #b89059 37% 52%, #f0dda7 53% 70%); }
+  .planet-uranus{ background: radial-gradient(circle at 35% 28%, #d6fff9, #76d8cf 55%, #2d8a91 100%); }
+  .planet-neptune{ background: radial-gradient(circle at 35% 28%, #a9c9ff, #3f68cf 55%, #183174 100%); }
+  .body-sun{ background: radial-gradient(circle at 35% 30%, #fff7a8, #f6b73c 45%, #db5b1f 100%); box-shadow: 0 0 18px rgba(246,183,60,.65), inset -8px -6px 10px rgba(120,49,14,.35); }
+  .body-moon{ background: radial-gradient(circle at 35% 28%, #f2f2f2, #b8b8b8 50%, #777 100%); }
+  .body-asteroid{ border-radius:42% 54% 45% 58%; background: radial-gradient(circle at 35% 28%, #c2b5a6, #7f7166 55%, #4b423c 100%); }
+  .body-comet{ background: radial-gradient(circle at 60% 40%, #f3ffff, #7ddaf4 45%, #3187a6 100%); }
+
+  .board-center{
+    grid-column: 2 / 10; grid-row: 2 / 7;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap: 14px;
+    background: radial-gradient(circle, rgba(232,163,61,.06), transparent 70%);
+    border-radius: 12px;
+  }
+  .center-title{ font-family:'Jua'; font-size: clamp(16px,2vw,22px); color: var(--star-dim); text-align:center; letter-spacing:1px;}
+  .dice-row{ display:flex; gap:14px; }
+  .die{
+    width: 54px; height:54px; border-radius: 12px;
+    background: linear-gradient(160deg,#fff,#dcdcec);
+    box-shadow: 0 6px 16px rgba(0,0,0,.4);
+    display:grid;
+    grid-template-columns: repeat(3,1fr);
+    grid-template-rows: repeat(3,1fr);
+    grid-template-areas:
+      "tl .  tr"
+      "ml mc mr"
+      "bl .  br";
+    gap: 2px;
+    padding: 9px;
+  }
+  .die.rolling{ animation: dieShake .11s linear infinite; }
+  @keyframes dieShake{
+    0%{ transform: rotate(0deg) scale(1); }
+    50%{ transform: rotate(10deg) scale(1.06); }
+    100%{ transform: rotate(-10deg) scale(1); }
+  }
+  .pip{
+    width: 9px; height:9px; border-radius:50%;
+    background:#1E2333; align-self:center; justify-self:center;
+    opacity:0; transform: scale(.4); transition: opacity .08s ease, transform .08s ease;
+  }
+  .pip.on{ opacity:1; transform: scale(1); }
+  .pip-tl{ grid-area: tl; } .pip-tr{ grid-area: tr; }
+  .pip-ml{ grid-area: ml; } .pip-mc{ grid-area: mc; } .pip-mr{ grid-area: mr; }
+  .pip-bl{ grid-area: bl; } .pip-br{ grid-area: br; }
+  .turn-log{
+    width: 100%;
+    background: rgba(0,0,0,.3);
+    border-radius: 10px; padding: 10px 12px;
+    font-size: 13.5px; color: var(--star-dim);
+    max-height: 230px; overflow-y:auto;
+    border: 1px solid rgba(233,236,255,.08);
+  }
+  .turn-log div{ margin-bottom:3px; }
+  .turn-log div:first-child{ color: var(--star); }
+
+  .token{
+    position:absolute; width: 18px; height:18px; border-radius:50%;
+    border: 2px solid rgba(255,255,255,.85);
+    transition: top .34s ease, left .34s ease, transform .22s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,.5);
+    z-index: 5;
+  }
+  .token.moving{
+    transform: scale(1.25);
+    box-shadow: 0 0 0 4px rgba(255,255,255,.14), 0 4px 13px rgba(0,0,0,.55);
+  }
+
+  /* ===== Side tool panel ===== */
+  .journal{
+    background: linear-gradient(180deg, rgba(29,38,80,.96), rgba(20,27,60,.96));
+    color: var(--star);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 14px 30px -14px rgba(0,0,0,.6);
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: hidden;
+    display:flex;
+    flex-direction:column;
+    gap: 12px;
+  }
+  .journal-tab{
+    font-family:'Jua'; font-size: 11px; letter-spacing:2px; color: var(--amber);
+    margin-bottom: 6px;
+  }
+  .journal h2{ font-family:'Jua'; margin: 0; font-size: 21px; color:var(--star); }
+  .journal-empty{ font-size: 13px; color:var(--star-dim); line-height:1.7; }
+  .planet-visual{
+    width: 132px; height:132px; border-radius:50%; margin: 6px auto 16px;
+    box-shadow: inset -22px -15px 28px rgba(0,0,0,.42), inset 8px 7px 18px rgba(255,255,255,.2), 0 8px 24px rgba(0,0,0,.28);
+    position: relative;
+  }
+  .planet-visual.ring::after{
+    content:""; display:block; position:absolute; top:47px; left:-34px;
+    width: 200px; height: 38px; border: 5px solid rgba(238,228,190,.72);
+    border-radius: 50%; transform: rotate(-14deg); opacity:.8;
+  }
+  .card-field{ margin-bottom: 10px; }
+  .card-field .lb{ font-size: 12px; color:#8a7c52; font-weight:700; margin-bottom:2px;}
+  .card-field .vl{ font-size: 15.5px; line-height:1.55; }
+  .card-divider{ border:none; border-top:1px dashed var(--paper-line); margin: 12px 0; }
+  .quiz-opt{
+    display:block; width:100%; text-align:left; background: rgba(255,255,255,.5);
+    border: 1px solid var(--paper-line); border-radius: 8px; padding: 9px 12px;
+    margin-bottom: 7px; font-size: 13.5px; cursor:pointer; color:#2A2110;
+    font-family:'Noto Sans KR';
+  }
+  .quiz-opt:hover{ background: #fff; }
+  .quiz-opt.correct{ background:#CDEBD6; border-color:#6FCF97; }
+  .quiz-opt.wrong{ background:#F4D2D9; border-color:#E0637A; }
+  .answer-box{
+    background: rgba(255,255,255,.55);
+    border: 1px dashed var(--paper-line);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin: 10px 0 12px;
+    font-size: 14px;
+    line-height: 1.6;
+    text-align: left;
+  }
+  .golden-key-card{
+    background: linear-gradient(160deg, #FFF3A3, #E8A33D 58%, #B86C17);
+    border: 2px solid #8f5314;
+    border-radius: 14px;
+    padding: 18px;
+    margin: 10px 0 16px;
+    color:#2B1A00;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 10px 24px rgba(0,0,0,.22);
+  }
+  .golden-choice-grid{
+    display:grid; grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:10px; margin:14px 0 18px; perspective:900px;
+  }
+  .golden-choice{
+    min-width:0; height:176px; border:0; padding:0; background:transparent;
+    cursor:pointer; perspective:900px;
+  }
+  .golden-choice:disabled{ cursor:default; opacity:.62; }
+  .golden-choice.flipped{ opacity:1; }
+  .golden-choice-inner{
+    position:relative; display:block; width:100%; height:100%;
+    transform-style:preserve-3d; transition:transform .65s ease;
+  }
+  .golden-choice.flipped .golden-choice-inner{ transform:rotateY(180deg); }
+  .golden-choice-face{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; padding:12px;
+    border:2px solid #8f5314; border-radius:10px;
+    backface-visibility:hidden; box-shadow:0 9px 20px rgba(0,0,0,.2);
+  }
+  .golden-choice-back{
+    background:linear-gradient(145deg, #36200D, #9B5C18 55%, #3C210C);
+    color:#FFE58D;
+  }
+  .golden-choice-back .key-mark{ font-size:42px; margin-bottom:8px; }
+  .golden-choice-back b{ font-family:'Jua'; font-size:15px; }
+  .golden-choice-front{
+    transform:rotateY(180deg);
+    background:linear-gradient(160deg, #FFF3A3, #E8A33D 58%, #B86C17);
+    color:#2B1A00; font-size:12.5px; line-height:1.45;
+  }
+  .golden-choice-front b{ font-family:'Jua'; font-size:16px; margin-bottom:8px; }
+  .choice-grid{
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 8px 0 14px;
+  }
+  .choice-grid.three{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .record-choice{
+    border: 1px solid var(--paper-line);
+    background: rgba(255,255,255,.55);
+    color:#2A2110;
+    border-radius: 10px;
+    padding: 10px 8px;
+    font-family:'Jua';
+    font-size: 14px;
+    cursor:pointer;
+  }
+  .record-choice.selected{
+    background: linear-gradient(180deg, var(--amber), var(--amber-deep));
+    border-color: #8f5314;
+    color:#2B1A00;
+    box-shadow: 0 0 0 2px rgba(232,163,61,.2);
+  }
+  .record-choice.correct{
+    background:#CDEBD6;
+    border-color:#6FCF97;
+  }
+  .record-choice.wrong{
+    background:#F4D2D9;
+    border-color:#E0637A;
+  }
+  .journal-record{
+    text-align:left;
+    background: rgba(255,255,255,.58);
+    border:1px solid var(--paper-line);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    font-size:14px;
+    line-height:1.55;
+  }
+
+  /* ===== Modal ===== */
+  .modal-backdrop{
+    position:fixed; inset:0; background: rgba(4,6,20,.72);
+    display:flex; align-items:center; justify-content:center;
+    z-index: 80; padding: 20px;
+  }
+  .modal-card{
+    background: var(--paper);
+    background-image: repeating-linear-gradient(var(--paper) 0px, var(--paper) 27px, var(--paper-line) 28px);
+    color:#2A2110; border-radius: 16px; padding: 26px;
+    width: 100%; max-width: 540px; max-height:calc(100vh - 40px); overflow-y:auto;
+    box-shadow: 0 24px 60px -18px rgba(0,0,0,.7);
+    text-align:center;
+  }
+  .modal-card h3{ font-family:'Jua'; font-size:22px; margin:4px 0 10px;}
+  .modal-card p{ font-size: 15.5px; line-height:1.6; margin: 0 0 16px; color:#4a3f22;}
+  .modal-amount{ font-family:'Jua'; font-size: 34px; margin: 6px 0 16px;}
+  .modal-amount.pos{ color:#2E9E5B; }
+  .modal-amount.neg{ color:#C43A55; }
+
+  .setup-gate{
+    position:fixed; inset:0; z-index:60; background: var(--ink);
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .gate-card{
+    background: var(--paper);
+    border-radius: 18px; padding: 30px; max-width: 420px; width:100%;
+    max-height:calc(100vh - 40px); overflow-y:auto;
+    color:#2A2110; box-shadow: 0 24px 60px -14px rgba(0,0,0,.6);
+  }
+  .gate-card h2{ font-family:'Jua'; margin:0 0 4px; font-size:22px; }
+  .gate-card .sub{ font-size:12.5px; color:#7a6c46; margin-bottom:18px;}
+  .game-mode-box{ margin:16px 0; padding-top:14px; border-top:1px solid var(--paper-line); }
+  .game-mode-label{ font-family:'Jua'; font-size:15px; margin-bottom:8px; }
+  .mode-tabs{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:6px; }
+  .mode-tab{
+    border:1px solid rgba(42,33,16,.25); background:rgba(42,33,16,.06);
+    border-radius:8px; padding:9px 5px; font-family:'Jua'; color:#4a3f22; cursor:pointer;
+  }
+  .mode-tab.selected{ background:var(--amber); border-color:#9B5C18; color:#2B1A00; }
+  .mode-config{ display:none; align-items:center; gap:8px; margin-top:9px; }
+  .mode-config.active{ display:flex; }
+  .mode-config label{ flex:1; font-size:13px; color:#6b6046; }
+  .mode-config select{
+    width:132px; border:1px solid var(--paper-line); border-radius:8px;
+    background:#fffaf0; padding:8px; font-family:'Noto Sans KR'; color:#2A2110;
+  }
+  .lap-stepper{ display:grid; grid-template-columns:34px 64px 34px; align-items:center; gap:4px; }
+  .lap-stepper button{
+    width:34px; height:34px; border:1px solid rgba(42,33,16,.25); border-radius:50%;
+    background:rgba(42,33,16,.07); color:#2A2110; font-family:'Jua'; font-size:20px; cursor:pointer;
+  }
+  .lap-stepper button:disabled{ opacity:.35; cursor:not-allowed; }
+  .lap-stepper output{ font-family:'Jua'; font-size:15px; text-align:center; color:#2A2110; }
+  .game-status{
+    min-height:26px; padding:5px 12px; border:1px solid rgba(232,163,61,.4);
+    border-radius:8px; color:var(--amber); background:rgba(232,163,61,.08);
+    font-family:'Jua'; font-size:14px;
+  }
+  .result-list{ text-align:left; margin:12px 0 18px; }
+  .result-row{
+    display:grid; grid-template-columns:34px 1fr auto; align-items:center;
+    gap:8px; padding:9px 4px; border-bottom:1px solid var(--paper-line); font-size:14px;
+  }
+  .result-row:first-child{ font-weight:700; color:#8a5a14; }
+
+  .win-icon{ font-size: 46px; }
+
+  ::-webkit-scrollbar{ width:6px; }
+  ::-webkit-scrollbar-thumb{ background: rgba(233,236,255,.2); border-radius:4px;}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="masthead">
+    <div>
+      <h1>🛰️ 태양계 관측 원정대</h1>
+      <p>교과서 「과학」 태양계 여행 말판 놀이 · 디지털 확장판</p>
+    </div>
+    <div class="masthead-actions">
+      <div class="badge-log-no">EXPEDITION LOG · 3단원 태양계와 별</div>
+      <button type="button" class="sound-toggle" id="soundToggle" aria-label="소리 끄기" title="소리 끄기">🔊</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- LEFT: dashboard + journal -->
+    <aside class="side-panel">
+      <div class="rail" id="rail"></div>
+
+      <section class="journal" id="journalTools">
+        <div>
+          <div class="journal-tab">EXPEDITION LOG</div>
+          <h2>탐사 로그</h2>
+        </div>
+        <div class="turn-log" id="turnLog"><div>탐사 기록이 이곳에 표시됩니다.</div></div>
+        <button class="btn btn-amber btn-block" id="openJournalBtn">관측기록장 열어보기</button>
+      </section>
+    </aside>
+
+    <!-- CENTER: board -->
+    <section class="board-wrap">
+      <div class="board" id="board"></div>
+    </section>
+  </div>
+</div>
+
+<!-- setup gate -->
+<div class="setup-gate" id="setupGate">
+  <div class="gate-card">
+    <h2>🚀 원정대 편성</h2>
+    <div class="sub">2~6명의 탐험가 이름을 입력하세요</div>
+    <div id="setupRows"></div>
+    <button class="btn btn-ghost" id="addPlayerBtn" style="margin-bottom:14px;">+ 탐험가 추가</button>
+    <div class="game-mode-box">
+      <div class="game-mode-label">게임 종료 조건</div>
+      <div class="mode-tabs">
+        <button type="button" class="mode-tab selected" data-mode="laps">바퀴 수</button>
+        <button type="button" class="mode-tab" data-mode="timer">제한 시간</button>
+      </div>
+      <div class="mode-config active" data-config="laps">
+        <label for="lapsTarget">먼저 완주하면 승리</label>
+        <div class="lap-stepper">
+          <button type="button" id="lapsMinus" aria-label="바퀴 수 줄이기">−</button>
+          <output id="lapsOutput" for="lapsTarget">5바퀴</output>
+          <button type="button" id="lapsPlus" aria-label="바퀴 수 늘리기">+</button>
+          <input type="hidden" id="lapsTarget" value="5">
+        </div>
+      </div>
+      <div class="mode-config" data-config="timer">
+        <label for="timerTarget">시간 종료 후 총자산 순위</label>
+        <select id="timerTarget"><option value="10">10분</option><option value="12" selected>12분</option><option value="15">15분</option></select>
+      </div>
+    </div>
+    <button class="btn btn-amber btn-block" id="startGameBtn">탐사 시작하기</button>
+  </div>
+</div>
+
+<!-- generic modal -->
+<div class="modal-backdrop" id="modalBackdrop" style="display:none;">
+  <div class="modal-card" id="modalCard"></div>
+</div>
+
+<script>
+/* ============ DATA ============ */
+const PLAYER_COLORS = ['#E8A33D','#6FCF97','#7FD8CE','#E0637A','#6E8FE8','#B06FD3'];
+const BOARD_COLS = 10;
+const BOARD_ROWS = 7;
+const BOARD_TILE_COUNT = (BOARD_COLS + BOARD_ROWS) * 2 - 4;
+const MOVE_STEP_MS = 430;
+const ARRIVAL_PAUSE_MS = 450;
+const PASS_START_BONUS = 300;
+const BODY_REWARD = 80;
+
+const PLANETS = [
+  {key:'mercury', name:'수성', color:'var(--c-mercury)', hex:'#9C9691', icon:'●', ring:false,
+   order:1, composition:'암석', colorText:'회색', surface:'딱딱한 땅으로 되어 있다.', desc:'태양과 가장 가깝고 표면에 충돌 구덩이가 많다.', price:300, toll:70},
+  {key:'venus', name:'금성', color:'var(--c-venus)', hex:'#E4C15C', icon:'●', ring:false,
+   order:2, composition:'암석', colorText:'노란색', surface:'딱딱한 땅으로 되어 있다.', desc:'두꺼운 대기로 둘러싸여 있다.', price:350, toll:80},
+  {key:'earth', name:'지구', color:'var(--c-earth)', hex:'#4C8CE0', icon:'●', ring:false,
+   order:3, composition:'암석', colorText:'파란색, 초록색', surface:'딱딱한 땅으로 되어 있다.', desc:'물과 공기가 있고 바다와 육지로 구분된다.', price:400, toll:90},
+  {key:'mars', name:'화성', color:'var(--c-mars)', hex:'#C1502E', icon:'●', ring:false,
+   order:4, composition:'암석', colorText:'붉은색', surface:'딱딱한 땅으로 되어 있다.', desc:'우주 탐사선을 많이 보낸 행성이다.', price:450, toll:110},
+  {key:'jupiter', name:'목성', color:'var(--c-jupiter)', hex:'#C68B59', icon:'●', ring:true,
+   order:5, composition:'기체', colorText:'갈색, 연갈색', surface:'기체로 이루어졌다.', desc:'표면에 줄무늬와 크고 붉은 점이 있고, 희미한 고리가 있다.', price:550, toll:140},
+  {key:'saturn', name:'토성', color:'var(--c-saturn)', hex:'#DCC08C', icon:'●', ring:true,
+   order:6, composition:'기체', colorText:'옅은 갈색', surface:'기체로 이루어졌다.', desc:'크고 뚜렷한 고리가 있다.', price:650, toll:170},
+  {key:'uranus', name:'천왕성', color:'var(--c-uranus)', hex:'#7FD8CE', icon:'●', ring:true,
+   order:7, composition:'기체', colorText:'청록색', surface:'기체로 이루어졌다.', desc:'고리가 희미하다.', price:750, toll:200},
+  {key:'neptune', name:'해왕성', color:'var(--c-neptune)', hex:'#3E63C9', icon:'●', ring:true,
+   order:8, composition:'기체', colorText:'파란색', surface:'기체로 이루어졌다.', desc:'표면에 검은 점이 있고 고리가 있다.', price:850, toll:230},
+];
+
+const CELESTIALS = [
+  {key:'sun', name:'태양', icon:'☀️', hex:'#F6B73C', category:'별(항성)',
+   colorText:'노란색, 붉은색', ring:false,
+   desc:'스스로 빛을 내며 태양계의 중심에 있는 천체이다.'},
+  {key:'moon', name:'달', icon:'🌙', hex:'#C8C8C8', category:'위성',
+   colorText:'회색', surface:'암석으로 되어 있다.', ring:false,
+   desc:'지구 주위를 공전하는 위성이다.'},
+  {key:'asteroid', name:'소행성', icon:'🪨', hex:'#8B7E72', category:'작은 천체',
+   colorText:'회색, 갈색', surface:'암석으로 되어 있다.', ring:false,
+   desc:'화성과 목성 사이에 특히 많이 분포하며 행성보다 크기가 작은 편이다.'},
+  {key:'comet', name:'혜성', icon:'☄️', hex:'#9DDDF6', category:'작은 천체',
+   colorText:'밝은 푸른색', surface:'먼지와 가스로 이루어졌다.', ring:false,
+   desc:'태양과 가까워지면 꼬리가 생기는 천체이다.'},
+];
+
+const BODY_OBSERVATION_DATA = {
+  sun: {feature:'스스로 빛을 낸다'},
+  moon: {feature:'지구 주위를 돈다'},
+  asteroid: {feature:'화성과 목성 사이에 많이 있다'},
+  comet: {feature:'태양 가까이에서 꼬리가 생긴다'},
+};
+
+function makeOX(q, answer, explanation){
+  return {q, opts:['O','X'], a:answer ? 0 : 1, explanation};
+}
+
+const BASE_QUIZ_BANK = {
+  mercury: [
+    makeOX('수성은 태양계 행성 중에서 대기가 거의 없는 행성이다.', true, '수성에는 대기가 거의 없습니다.'),
+    makeOX('수성의 표면은 목성처럼 기체로 이루어져 있다.', false, '수성의 표면은 딱딱한 암석으로 이루어져 있습니다.'),
+    makeOX('수성에는 달처럼 충돌 구덩이가 많이 있다.', true, '수성 표면에는 충돌 구덩이가 많이 있습니다.'),
+    makeOX('수성을 실제로 관측하면 붉은색으로 보인다.', false, '수성은 주로 회색으로 보입니다.'),
+    makeOX('수성은 표면이 딱딱한 암석으로 이루어진 행성이다.', true, '수성은 암석 행성입니다.'),
+    makeOX('수성은 스스로 빛을 내는 천체이다.', false, '수성은 태양빛을 받아 밝게 보이는 행성입니다.'),
+  ],
+  venus: [
+    makeOX('금성은 매우 두꺼운 대기로 둘러싸여 있다.', true, '금성은 두꺼운 대기로 둘러싸여 있습니다.'),
+    makeOX('금성의 표면은 평평한 암석으로 이루어져 있다.', true, '금성은 딱딱한 암석 표면을 가진 행성입니다.'),
+    makeOX('금성의 표면은 기체로 이루어져 있다.', false, '금성은 암석 행성입니다.'),
+    makeOX('금성은 수성, 지구, 화성처럼 표면이 딱딱한 행성이다.', true, '네 행성은 모두 암석 행성입니다.'),
+    makeOX('금성은 물과 공기가 있어 생물이 살아가기에 알맞은 행성이다.', false, '물과 공기가 있어 생물이 살기 알맞은 행성은 지구입니다.'),
+    makeOX('금성은 스스로 빛을 내지 못하고 태양빛을 받아 밝게 보인다.', true, '행성은 태양빛을 받아 밝게 보입니다.'),
+  ],
+  earth: [
+    makeOX('지구는 우주에서 보았을 때 파란색, 초록색, 흰색으로 보인다.', true, '바다와 육지, 구름 때문에 여러 색으로 보입니다.'),
+    makeOX('지구의 표면은 바다와 육지로 구분된다.', true, '지구 표면에는 바다와 육지가 있습니다.'),
+    makeOX('지구는 토성처럼 뚜렷한 고리를 가지고 있다.', false, '지구에는 고리가 없습니다.'),
+    makeOX('지구에 생물이 살아가기 알맞은 이유는 물과 공기가 있기 때문이다.', true, '지구에는 생명에 필요한 물과 공기가 있습니다.'),
+    makeOX('지구의 표면은 딱딱한 암석이 아니라 기체로 이루어져 있다.', false, '지구에는 딱딱한 육지와 바다가 있습니다.'),
+    makeOX('지구는 태양계에서 유일하게 스스로 빛을 내는 천체이다.', false, '태양계에서 스스로 빛을 내는 천체는 태양입니다.'),
+  ],
+  mars: [
+    makeOX('화성은 매우 두꺼운 대기로 둘러싸여 있다.', false, '화성의 대기는 매우 얇습니다.'),
+    makeOX('화성의 표면은 붉은색 암석과 흙으로 이루어져 있다.', true, '화성은 붉은색 암석과 흙으로 덮여 있습니다.'),
+    makeOX('화성은 표면이 딱딱한 암석이라는 점에서 지구와 비슷하다.', true, '화성과 지구는 모두 암석 행성입니다.'),
+    makeOX('화성은 목성이나 토성처럼 고리를 가지고 있다.', false, '화성에는 고리가 없습니다.'),
+    makeOX('화성은 과학자들이 생명체의 흔적을 찾으려고 조사하는 행성이다.', true, '화성에는 여러 우주 탐사선이 보내졌습니다.'),
+    makeOX('화성은 목성, 토성, 천왕성, 해왕성처럼 기체 행성이다.', false, '화성은 표면이 딱딱한 암석 행성입니다.'),
+  ],
+  jupiter: [
+    makeOX('목성의 표면은 딱딱한 땅이 아니라 기체로 이루어져 있다.', true, '목성은 기체 행성입니다.'),
+    makeOX('목성의 대기에는 물결치는 듯한 줄무늬가 나타난다.', true, '목성 표면에서는 여러 줄무늬를 볼 수 있습니다.'),
+    makeOX('목성에는 크고 붉은 점 모양의 소용돌이가 있다.', true, '목성에는 대적점이라 불리는 큰 소용돌이가 있습니다.'),
+    makeOX('목성은 고리가 전혀 없는 행성이다.', false, '목성에는 희미한 고리가 있습니다.'),
+    makeOX('목성은 수성이나 금성처럼 표면이 암석으로 이루어져 있다.', false, '목성은 기체로 이루어진 행성입니다.'),
+    makeOX('목성도 지구처럼 스스로 빛을 내지 못하는 행성이다.', true, '목성은 태양빛을 받아 밝게 보입니다.'),
+  ],
+  saturn: [
+    makeOX('토성의 표면은 화성처럼 붉은색 암석으로 이루어져 있다.', false, '토성은 기체로 이루어진 행성입니다.'),
+    makeOX('토성의 가장 큰 특징은 크고 뚜렷한 고리가 있다는 것이다.', true, '토성에는 여러 겹의 뚜렷한 고리가 있습니다.'),
+    makeOX('토성의 표면은 목성과 마찬가지로 기체로 이루어져 있다.', true, '토성과 목성은 모두 기체 행성입니다.'),
+    makeOX('토성은 스스로 빛을 내어 태양계를 밝혀 준다.', false, '태양계에서 스스로 빛을 내는 천체는 태양입니다.'),
+    makeOX('토성은 목성, 천왕성, 해왕성과 마찬가지로 기체 행성이며 고리가 있다.', true, '네 행성은 기체로 이루어져 있고 고리가 있습니다.'),
+    makeOX('토성만 태양계에서 유일하게 고리를 가지고 있다.', false, '목성, 천왕성, 해왕성에도 고리가 있습니다.'),
+  ],
+  uranus: [
+    makeOX('천왕성은 전체적으로 연한 청록색을 띠는 행성이다.', true, '천왕성은 청록색으로 보입니다.'),
+    makeOX('천왕성에도 희미한 고리가 있다.', true, '천왕성의 고리는 희미하게 보입니다.'),
+    makeOX('천왕성의 표면은 매끄러운 암석으로 이루어져 있다.', false, '천왕성은 기체 행성입니다.'),
+    makeOX('천왕성에는 생명체가 살아가기에 알맞은 물과 공기가 있다.', false, '생명체가 살기 알맞은 물과 공기가 있는 행성은 지구입니다.'),
+    makeOX('천왕성도 다른 행성들처럼 태양 주위를 돈다.', true, '모든 태양계 행성은 태양 주위를 돕니다.'),
+    makeOX('천왕성은 목성, 토성, 해왕성과 함께 기체 행성으로 분류된다.', true, '네 행성은 모두 기체 행성입니다.'),
+  ],
+  neptune: [
+    makeOX('해왕성은 태양에서 가장 멀리 떨어져 있는 행성이다.', true, '해왕성은 태양에서 여덟 번째 행성입니다.'),
+    makeOX('해왕성에도 고리가 있다.', true, '해왕성에도 고리가 있습니다.'),
+    makeOX('해왕성은 화성이나 지구처럼 암석으로 이루어진 행성이다.', false, '해왕성은 기체 행성입니다.'),
+    makeOX('해왕성도 고리를 가지고 있는 행성 중 하나이다.', true, '해왕성에는 고리가 있습니다.'),
+    makeOX('해왕성은 스스로 빛을 내는 태양계의 별이다.', false, '해왕성은 행성이며 스스로 빛을 내지 못합니다.'),
+    makeOX('해왕성은 태양에서 여덟 번째로 떨어져 있는 행성이다.', true, '행성 순서에서 해왕성은 여덟 번째입니다.'),
+  ],
+};
+
+const QUIZ_BANK = [
+  {q:'태양계에서 스스로 빛을 내는 천체는 무엇일까요?', opts:['행성','위성','태양'], a:2},
+  {q:'행성에 대한 설명으로 알맞은 것은 무엇일까요?', opts:['스스로 빛을 낸다','태양 주위를 도는 둥근 천체이다','다른 행성 주위만 돈다'], a:1},
+  {q:'태양에서 가까운 순서가 바른 것은?', opts:['수성-금성-화성-지구','수성-금성-지구-화성','금성-지구-수성-화성'], a:1},
+  {q:'표면이 딱딱한 암석으로 이루어진 행성이 아닌 것은?', opts:['수성','지구','목성'], a:2},
+  {q:'기체로 이루어져 있고 고리를 가진 행성은?', opts:['금성','화성','천왕성'], a:2},
+  {q:'수성을 관측했을 때 주로 보이는 색은?', opts:['붉은색','회색','파란색'], a:1},
+  {q:'달처럼 충돌 구덩이가 많고 대기가 거의 없는 행성은?', opts:['수성','지구','해왕성'], a:0},
+  {q:'금성을 둘러싼 대기의 특징은?', opts:['거의 없다','매우 얇다','매우 두껍다'], a:2},
+  {q:'금성의 표면 상태로 알맞은 것은?', opts:['딱딱한 암석','붉은색 흙','기체'], a:0},
+  {q:'지구가 생물이 살아가기에 알맞은 가장 큰 이유는?', opts:['뚜렷한 고리','물과 공기','충돌 구덩이'], a:1},
+  {q:'우주에서 본 지구의 색이 아닌 것은?', opts:['파란색','초록색','붉은색'], a:2},
+  {q:'화성의 표면이 붉게 보이는 까닭은?', opts:['붉은색 바다','붉은색 기체','붉은색 암석과 흙'], a:2},
+  {q:'화성과 지구의 표면이 비슷한 점은?', opts:['딱딱한 암석이다','대기가 매우 두껍다','모두 바다가 있다'], a:0},
+  {q:'목성의 대기에서 볼 수 있는 큰 특징은?', opts:['뚜렷한 고리만 있다','충돌 구덩이가 많다','줄무늬와 큰 소용돌이가 있다'], a:2},
+  {q:'토성의 가장 큰 특징은?', opts:['크고 뚜렷한 고리','붉은색 암석 표면','크고 붉은 점'], a:0},
+  {q:'천왕성은 전체적으로 어떤 색을 띠나요?', opts:['회색','연한 청록색','붉은색'], a:1},
+  {q:'해왕성에서도 볼 수 있는 것은 무엇일까요?', opts:['충돌 구덩이만 있다','거대한 화산','고리'], a:2},
+];
+
+const MISSION_BANK = [
+  {title:'5초 행성 이름 도전', prompt:'태양계 모든 행성 이름을 5초 안에 말하기', answer:'수성, 금성, 지구, 화성, 목성, 토성, 천왕성, 해왕성', seconds:5},
+  {title:'지구 닮은 행성 찾기', prompt:'지구와 비슷한 행성 하나를 말하고 이유 말하기', answer:'예: 화성. 지구처럼 표면이 딱딱한 땅으로 되어 있기 때문입니다. 수성이나 금성도 같은 이유로 가능해요.'},
+  {title:'지구의 생명 환경', prompt:'지구에 생물이 살아가기에 알맞은 환경이 된 이유 말하기', answer:'인정 기준: 물과 공기가 있기 때문입니다.'},
+  {title:'고리 행성 찾기', prompt:'고리가 있는 행성 2개 말하기', answer:'목성, 토성, 천왕성, 해왕성 중 2개를 말하면 됩니다.'},
+  {title:'단단한 표면 찾기', prompt:'표면이 딱딱한 행성 2개 말하기', answer:'수성, 금성, 지구, 화성 중 2개를 말하면 됩니다.'},
+  {title:'기체 행성 찾기', prompt:'기체로 이루어진 행성 2개 말하기', answer:'목성, 토성, 천왕성, 해왕성 중 2개를 말하면 됩니다.'},
+  {title:'태양 정체 밝히기', prompt:'태양이 행성이 아닌 이유 말하기', answer:'태양은 스스로 빛을 내는 별, 즉 항성이기 때문입니다.'},
+  {title:'달 정체 밝히기', prompt:'달이 행성이 아닌 이유 말하기', answer:'달은 지구 주위를 도는 위성이기 때문입니다.'},
+  {title:'최애 행성 발표', prompt:'가장 마음에 드는 행성을 고르고 특징 한 가지 말하기', answer:'행성 이름과 그 행성의 특징 한 가지를 말하면 성공입니다. 예: 토성은 크고 뚜렷한 고리가 있습니다.'},
+];
+
+const GOLDEN_KEYS = [
+  {title:'외계인과 친구 맺기', desc:'외계인에게 희귀 광물을 선물로 받았습니다! 연구비 +150G', amount:150},
+  {title:'우주 쓰레기 청소 우수 대원', desc:'다른 모든 플레이어에게서 30G씩 받습니다.', collectAll:30},
+  {title:'우주 식량 과식', desc:'건조 아이스크림을 몰래 다 먹었습니다. 식량 재구매 비용 -50G', amount:-50},
+  {title:'태양풍에 날아간 지갑', desc:'우주선 밖을 구경하다 연구비 일부를 잃었습니다. -30G', amount:-30},
+  {title:'초고속 웜홀 발견!', desc:'원하는 주인 없는 행성으로 즉시 이동합니다. 출발지 보너스는 없습니다.', moveToEmptyPlanet:true},
+  {title:'우주선 부스터 고장!', desc:'뒤로 3칸 이동하며 궤도를 수정합니다.', moveBack:3},
+  {title:'우주 정거장으로 텔레포트', desc:'우주 정거장으로 즉시 이동하고 다음 차례에 쉽니다.', moveToStation:true},
+  {title:'SOS 구조 요청!', desc:'현재 연구비가 가장 적은 플레이어를 내 칸으로 불러옵니다.', summonPoorest:true},
+  {title:'최신형 우주 은신 망토', desc:'보관 가능. 다음 남의 행성 기지 통행료를 1회 면제받습니다.', tollPasses:1},
+  {title:'만능 우주 번역기', desc:'보관 가능. 우주 퀴즈나 말하기 미션을 1회 무조건 성공 처리합니다.', successPasses:1},
+  {title:'블랙홀 비상 탈출 로켓', desc:'보관 가능. 블랙홀에서 즉시 탈출할 수 있습니다.', blackHolePasses:1},
+  {title:'무중력 우주 댄스!', desc:'무중력 춤을 5초 동안 추면 +100G, 하지 않으면 -30G', action:'dance'},
+  {title:'외계인 교신 성공!', desc:'외계어로 인사한 후 +50G를 받습니다.', action:'greeting'},
+  {title:'소행성 충돌 경보!', desc:'가장 늦게 방어 자세를 취한 플레이어에게서 30G를 받습니다.', action:'asteroid'},
+];
+
+/* ===== Board index -> tile type ===== */
+// special corners: 0 start, 6 blackhole, 16 station
+const PLANET_SLOTS = [1,3,5,8,10,12,14,15];
+const BODY_SLOTS = [7,18,22,25];
+const MISSION_SLOTS = [4,11,20,26,28];
+const QUIZ_SLOTS = [2,9,13,17,19,21,23,24,27,29];
+
+function buildBoardData(){
+  const data = new Array(BOARD_TILE_COUNT);
+  data[0] = {type:'start', name:'출발지', icon:'🚩'};
+  data[6] = {type:'blackhole', name:'블랙홀', icon:'🕳️'};
+  data[16] = {type:'station', name:'우주 정거장', icon:'📡'};
+  PLANET_SLOTS.forEach((idx,i)=>{
+    const p = PLANETS[i];
+    data[idx] = {type:'planet', name:p.name, icon:p.icon, planet:p};
+  });
+  BODY_SLOTS.forEach((idx,i)=>{
+    const body = CELESTIALS[i];
+    data[idx] = {type:'body', name:body.name, icon:body.icon, body};
+  });
+  QUIZ_SLOTS.forEach((idx,i)=>{
+    data[idx] = {type:'quiz', name:'우주 퀴즈', icon:'🔑'};
+  });
+  MISSION_SLOTS.forEach((idx)=>{
+    data[idx] = {type:'mission', name:'미션', icon:'🎤'};
+  });
+  return data;
+}
+const BOARD = buildBoardData();
+
+/* index -> {row,col} on 10x7 perimeter, start = bottom-left, counter-clockwise */
+function indexToRC(i){
+  const leftEnd = BOARD_ROWS - 1;
+  const topEnd = leftEnd + BOARD_COLS - 1;
+  const rightEnd = topEnd + BOARD_ROWS - 1;
+  if(i>=0 && i<=leftEnd) return {row:leftEnd-i, col:0};
+  if(i>leftEnd && i<=topEnd) return {row:0, col:i-leftEnd};
+  if(i>topEnd && i<=rightEnd) return {row:i-topEnd, col:BOARD_COLS-1};
+  if(i>rightEnd && i<BOARD_TILE_COUNT) return {row:BOARD_ROWS-1, col:(BOARD_COLS-1)-(i-rightEnd)};
+  return {row:leftEnd,col:0};
+}
+
+function getOwnerIndex(planetKey){
+  return players.findIndex(player => player.owned.includes(planetKey));
+}
+
+function getBaseStage(player, planetKey){
+  return player.baseStages?.[planetKey] || 1;
+}
+
+function upgradeCost(planet){
+  return Math.round(planet.price * 0.8);
+}
+
+function buyoutCost(planet, stage){
+  return Math.round(planet.price * (stage === 2 ? 2.4 : 1.6));
+}
+
+function tollFor(planet, stage){
+  return planet.toll * stage;
+}
+
+/* ============ STATE ============ */
+let players = [];
+let currentIdx = 0;
+let doublesStreak = 0;
+let gameOver = false;
+let observationRecords = {};
+let bodyObservationRecords = {};
+let quizDeck = [];
+let escapeQuizDeck = [];
+let selectedGameMode = 'laps';
+let gameRule = {type:'laps', target:5};
+let timerId = null;
+let gameEndsAt = 0;
+let timeExpired = false;
+let roundEndPending = null;
+let soundEnabled = true;
+let audioContext = null;
+let soundMaster = null;
+let ambientStarted = false;
+
+function ensureAudio(){
+  if(!soundEnabled) return;
+  if(!audioContext){
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if(!AudioContextClass) return;
+    audioContext = new AudioContextClass();
+    soundMaster = audioContext.createGain();
+    soundMaster.gain.value = .28;
+    soundMaster.connect(audioContext.destination);
+  }
+  if(audioContext.state === 'suspended') audioContext.resume();
+  if(!ambientStarted) startSpaceAmbient();
+}
+
+function startSpaceAmbient(){
+  if(!audioContext || ambientStarted) return;
+  ambientStarted = true;
+  const ambientGain = audioContext.createGain();
+  const filter = audioContext.createBiquadFilter();
+  ambientGain.gain.value = .055;
+  filter.type = 'lowpass';
+  filter.frequency.value = 420;
+  ambientGain.connect(filter);
+  filter.connect(soundMaster);
+  [55, 82.5, 110].forEach((frequency,index)=>{
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    oscillator.type = index === 0 ? 'sine' : 'triangle';
+    oscillator.frequency.value = frequency;
+    gain.gain.value = index === 0 ? .7 : .18;
+    oscillator.connect(gain);
+    gain.connect(ambientGain);
+    oscillator.start();
+  });
+  const lfo = audioContext.createOscillator();
+  const lfoGain = audioContext.createGain();
+  lfo.frequency.value = .08;
+  lfoGain.gain.value = .018;
+  lfo.connect(lfoGain);
+  lfoGain.connect(ambientGain.gain);
+  lfo.start();
+}
+
+function playTone(frequency, duration=.15, type='sine', volume=.12, delay=0){
+  if(!soundEnabled) return;
+  ensureAudio();
+  if(!audioContext || !soundMaster) return;
+  const start = audioContext.currentTime + delay;
+  const oscillator = audioContext.createOscillator();
+  const gain = audioContext.createGain();
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, start);
+  gain.gain.setValueAtTime(0, start);
+  gain.gain.linearRampToValueAtTime(volume, start + .015);
+  gain.gain.exponentialRampToValueAtTime(.001, start + duration);
+  oscillator.connect(gain);
+  gain.connect(soundMaster);
+  oscillator.start(start);
+  oscillator.stop(start + duration + .03);
+}
+
+function playSound(name, value=0){
+  if(name === 'dice'){
+    [180,240,310].forEach((frequency,index)=>playTone(frequency,.11,'square',.045,index*.07));
+  } else if(name === 'move'){
+    playTone(430 + (value%6)*35,.09,'sine',.075);
+  } else if(name === 'arrival'){
+    playTone(392,.2,'triangle',.1); playTone(587,.3,'sine',.08,.1);
+  } else if(name === 'toll'){
+    playTone(220,.2,'sawtooth',.07); playTone(165,.3,'triangle',.08,.12);
+  } else if(name === 'correct'){
+    playTone(523,.16,'sine',.1); playTone(659,.2,'sine',.1,.1); playTone(784,.28,'sine',.09,.2);
+  } else if(name === 'wrong'){
+    playTone(330,.18,'triangle',.1); playTone(220,.3,'triangle',.09,.12);
+  } else if(name === 'golden'){
+    [659,880,1047].forEach((frequency,index)=>playTone(frequency,.35,'sine',.075,index*.09));
+  } else if(name === 'build'){
+    playTone(196,.25,'triangle',.1); playTone(392,.35,'sine',.09,.13); playTone(587,.4,'sine',.08,.25);
+  } else if(name === 'victory'){
+    [523,659,784,1047].forEach((frequency,index)=>playTone(frequency,.45,'sine',.09,index*.13));
+  }
+}
+
+function updateSoundToggle(){
+  const button = document.getElementById('soundToggle');
+  if(!button) return;
+  button.textContent = soundEnabled ? '🔊' : '🔇';
+  button.classList.toggle('muted', !soundEnabled);
+  button.setAttribute('aria-label', soundEnabled ? '소리 끄기' : '소리 켜기');
+  button.title = soundEnabled ? '소리 끄기' : '소리 켜기';
+}
+
+function shuffleQuestions(items){
+  const shuffled = [...items];
+  for(let i=shuffled.length-1;i>0;i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+function drawSpaceQuiz(){
+  if(!quizDeck.length) quizDeck = shuffleQuestions(QUIZ_BANK);
+  return quizDeck.pop();
+}
+
+function drawEscapeOX(){
+  if(!escapeQuizDeck.length){
+    escapeQuizDeck = shuffleQuestions(Object.values(BASE_QUIZ_BANK).flat());
+  }
+  return escapeQuizDeck.pop();
+}
+
+/* ============ SETUP UI ============ */
+const setupRows = document.getElementById('setupRows');
+function defaultLapsForPlayerCount(count){
+  if(count === 2) return 5;
+  if(count === 3) return 4;
+  return 3;
+}
+
+function syncDefaultLapsForPlayerCount(count){
+  const target = defaultLapsForPlayerCount(count);
+  const input = document.getElementById('lapsTarget');
+  const output = document.getElementById('lapsOutput');
+  const minus = document.getElementById('lapsMinus');
+  const plus = document.getElementById('lapsPlus');
+  input.value = target;
+  output.textContent = `${target}바퀴`;
+  minus.disabled = target <= 2;
+  plus.disabled = target >= 10;
+}
+
+function renderSetupRows(){
+  setupRows.innerHTML = '';
+  const count = Math.max(2, players.length || 2);
+  for(let i=0;i<count;i++){
+    const row = document.createElement('div');
+    row.className = 'setup-row';
+    row.innerHTML = `
+      <span class="swatch" style="background:${PLAYER_COLORS[i]}"></span>
+      <input type="text" placeholder="탐험가 ${i+1}" data-i="${i}" value="${players[i]?.name || ''}">
+      ${i >= 2 ? `<button type="button" class="remove-player" data-remove="${i}" aria-label="탐험가 ${i+1} 삭제" title="삭제">&times;</button>` : ''}
+    `;
+    setupRows.appendChild(row);
+  }
+  document.getElementById('addPlayerBtn').disabled = count >= 6;
+  syncDefaultLapsForPlayerCount(count);
+  setupRows.querySelectorAll('.remove-player').forEach(button=>{
+    button.onclick = ()=>{
+      const currentNames = Array.from(setupRows.querySelectorAll('input')).map(input=>({name:input.value}));
+      currentNames.splice(Number(button.dataset.remove), 1);
+      players = currentNames;
+      renderSetupRows();
+    };
+  });
+}
+players = [{name:''},{name:''}];
+renderSetupRows();
+
+document.getElementById('addPlayerBtn').addEventListener('click', ()=>{
+  const current = setupRows.querySelectorAll('input');
+  if(current.length >= 6) return;
+  players = Array.from(current).map(inp=>({name:inp.value}));
+  players.push({name:''});
+  renderSetupRows();
+});
+
+document.querySelectorAll('.mode-tab').forEach(button=>{
+  button.addEventListener('click', ()=>{
+    selectedGameMode = button.dataset.mode;
+    document.querySelectorAll('.mode-tab').forEach(tab=>tab.classList.toggle('selected', tab === button));
+    document.querySelectorAll('.mode-config').forEach(panel=>panel.classList.toggle('active', panel.dataset.config === selectedGameMode));
+  });
+});
+
+document.getElementById('soundToggle').addEventListener('click', ()=>{
+  soundEnabled = !soundEnabled;
+  if(soundMaster && audioContext){
+    soundMaster.gain.setTargetAtTime(soundEnabled ? .28 : 0, audioContext.currentTime, .04);
+  }
+  if(soundEnabled) ensureAudio();
+  updateSoundToggle();
+});
+updateSoundToggle();
+
+const lapsTarget = document.getElementById('lapsTarget');
+const lapsOutput = document.getElementById('lapsOutput');
+const lapsMinus = document.getElementById('lapsMinus');
+const lapsPlus = document.getElementById('lapsPlus');
+function updateLapsTarget(change=0){
+  const next = Math.min(10, Math.max(2, Number(lapsTarget.value) + change));
+  lapsTarget.value = next;
+  lapsOutput.textContent = `${next}바퀴`;
+  lapsMinus.disabled = next <= 2;
+  lapsPlus.disabled = next >= 10;
+}
+lapsMinus.addEventListener('click', ()=>updateLapsTarget(-1));
+lapsPlus.addEventListener('click', ()=>updateLapsTarget(1));
+updateLapsTarget();
+
+document.getElementById('openJournalBtn').addEventListener('click', showObservationArchive);
+
+document.getElementById('startGameBtn').addEventListener('click', ()=>{
+  const inputs = setupRows.querySelectorAll('input');
+  const names = Array.from(inputs).map((inp,i)=> inp.value.trim() || `탐험가 ${i+1}`);
+  const targetIds = {laps:'lapsTarget', timer:'timerTarget'};
+  const rule = {type:selectedGameMode, target:Number(document.getElementById(targetIds[selectedGameMode]).value)};
+  showStartGuide(names, rule);
+});
+
+function ruleDescription(rule){
+  if(rule.type === 'laps') return `${rule.target}바퀴를 먼저 완주하면 종료`;
+  return `${rule.target}분이 지나면 총자산 순위로 종료`;
+}
+
+function showStartGuide(names, rule){
+  showModal(`
+    <h3>탐사 안내</h3>
+    <p>주사위를 굴려 태양계 말판을 이동합니다. 도착한 칸의 안내를 읽고 행성 특징을 관측 기록장에 정리하세요.</p>
+    <p>행성 칸에서는 퀴즈 3문제 중 2문제 이상 맞히면 1단계 탐사 기지를 세울 수 있고, 자기 기지에 다시 와서 같은 기준을 통과하면 2단계 관측 기지로 진화할 수 있습니다.</p>
+    <p>다른 원정대의 기지에 도착하면 통행료를 내거나, 예산이 충분할 때 그 기지를 인수할 수 있습니다.</p>
+    <p><b>이번 종료 조건:</b> ${ruleDescription(rule)}</p>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-ghost" style="flex:1;" id="backToSetup">이름 수정</button>
+      <button class="btn btn-amber" style="flex:1;" id="confirmStart">시작</button>
+    </div>
+  `, {closable:false});
+  document.getElementById('backToSetup').onclick = closeModal;
+  document.getElementById('confirmStart').onclick = ()=>{
+    ensureAudio();
+    closeModal();
+    beginGame(names, rule);
+  };
+}
+
+function beginGame(names, rule){
+  gameRule = rule;
+  gameOver = false;
+  timeExpired = false;
+  roundEndPending = null;
+  players = names.map((name,i)=>({
+    name, color: PLAYER_COLORS[i], money: 1500, position: 0, laps:0,
+    owned: [], baseStages: {}, tollPasses:0, quizShields:0, successPasses:0,
+    blackHolePasses:0, jailTurns:0, bankrupt:false, skipTurn:false
+  }));
+  currentIdx = 0;
+  observationRecords = {};
+  bodyObservationRecords = {};
+  quizDeck = [];
+  escapeQuizDeck = [];
+  document.getElementById('setupGate').style.display = 'none';
+  renderBoard();
+  renderRail();
+  logMsg(`🚀 ${players.length}명의 원정대가 출발지에서 탐사를 시작합니다!`, true);
+  logMsg(`🏁 종료 조건: ${ruleDescription(gameRule)}`);
+  startGameClock();
+  renderTurnPrompt();
+}
+
+function startGameClock(){
+  if(timerId) clearInterval(timerId);
+  if(gameRule.type !== 'timer'){
+    updateGameStatus();
+    return;
+  }
+  gameEndsAt = Date.now() + gameRule.target * 60 * 1000;
+  timerId = setInterval(()=>{
+    if(gameOver){ clearInterval(timerId); return; }
+    if(Date.now() >= gameEndsAt){
+      timeExpired = true;
+      clearInterval(timerId);
+      requestRoundEnd('제한 시간이 끝났습니다. 현금과 기지 가치를 합친 총자산으로 순위를 정했습니다.');
+      updateGameStatus();
+      return;
+    }
+    updateGameStatus();
+  }, 1000);
+  updateGameStatus();
+}
+
+function updateGameStatus(){
+  const status = document.getElementById('gameStatus');
+  if(!status) return;
+  if(roundEndPending){
+    status.textContent = '종료 조건 달성 · 마지막 순서까지 진행';
+    return;
+  }
+  if(gameRule.type === 'laps'){
+    status.textContent = `완주 목표 · ${gameRule.target}바퀴 먼저 도착`;
+    return;
+  }
+  if(timeExpired){
+    status.textContent = '시간 종료 · 현재 행동 마무리 중';
+    return;
+  }
+  const left = Math.max(0, gameEndsAt - Date.now());
+  const minutes = Math.floor(left / 60000);
+  const seconds = Math.floor((left % 60000) / 1000);
+  status.textContent = `남은 시간 · ${minutes}:${String(seconds).padStart(2,'0')}`;
+}
+
+/* ============ BOARD SIZING (fit tablet-landscape viewport) ============ */
+function sizeBoard(){
+  const wrap = document.querySelector('.board-wrap');
+  const board = document.getElementById('board');
+  if(!wrap || !board) return;
+  const w = wrap.clientWidth - 4;
+  const h = wrap.clientHeight - 4;
+  const aspect = BOARD_COLS / BOARD_ROWS;
+  let boardW = w;
+  let boardH = boardW / aspect;
+  if(boardH > h){
+    boardH = h;
+    boardW = boardH * aspect;
+  }
+  board.style.width = Math.max(300, boardW) + 'px';
+  board.style.height = Math.max(190, boardH) + 'px';
+}
+window.addEventListener('resize', sizeBoard);
+
+/* ============ RENDER: BOARD ============ */
+const boardEl = document.getElementById('board');
+function renderBoard(){
+  boardEl.innerHTML = '';
+  for(let i=0;i<BOARD_TILE_COUNT;i++){
+    const {row,col} = indexToRC(i);
+    const d = BOARD[i];
+    const tile = document.createElement('div');
+    tile.className = 'tile ' + (d.type==='planet' ? 'planet' : d.type==='body' ? 'body' : d.type==='quiz' ? 'quiz' : d.type==='mission' ? 'mission' : 'corner');
+    tile.style.gridRow = (row+1);
+    tile.style.gridColumn = (col+1);
+    if(d.type==='planet') tile.style.setProperty('--planet-color', d.planet.color);
+    tile.id = 'tile-'+i;
+    tile.innerHTML = `
+      ${tileVisualHTML(d)}
+      <div class="tk">${d.name}</div>
+      ${d.type==='planet' ? `<div class="price-tag">${d.planet.price}G</div>` : ''}
+    `;
+    boardEl.appendChild(tile);
+  }
+  const center = document.createElement('div');
+  center.className = 'board-center';
+  center.innerHTML = `
+    <div class="center-title">🌌 태양계 관측 원정</div>
+    <div class="game-status" id="gameStatus"></div>
+    <div class="dice-row">
+      <div class="die" id="die1">
+        <span class="pip pip-tl"></span><span class="pip pip-tr"></span>
+        <span class="pip pip-ml"></span><span class="pip pip-mc"></span><span class="pip pip-mr"></span>
+        <span class="pip pip-bl"></span><span class="pip pip-br"></span>
+      </div>
+      <div class="die" id="die2">
+        <span class="pip pip-tl"></span><span class="pip pip-tr"></span>
+        <span class="pip pip-ml"></span><span class="pip pip-mc"></span><span class="pip pip-mr"></span>
+        <span class="pip pip-bl"></span><span class="pip pip-br"></span>
+      </div>
+    </div>
+    <div id="turnPrompt"></div>
+  `;
+  boardEl.appendChild(center);
+  sizeBoard();
+  renderTileMarkers();
+  renderTokens();
+  updateGameStatus();
+}
+
+function tileVisualHTML(d){
+  if(d.type === 'planet'){
+    const ring = d.planet.ring ? ' ring' : '';
+    return `<div class="planet-mini planet-${d.planet.key}${ring}"></div>`;
+  }
+  if(d.type === 'body'){
+    const ring = d.body.ring ? ' ring' : '';
+    return `<div class="body-mini body-${d.body.key}${ring}"></div>`;
+  }
+  return `<div class="ti">${d.icon}</div>`;
+}
+
+function renderTileMarkers(){
+  document.querySelectorAll('.owner-flag,.stage-badge').forEach(el=>el.remove());
+  PLANET_SLOTS.forEach((slot)=>{
+    const planet = BOARD[slot].planet;
+    const ownerIdx = getOwnerIndex(planet.key);
+    if(ownerIdx === -1) return;
+    const tile = document.getElementById('tile-'+slot);
+    if(!tile) return;
+    const owner = players[ownerIdx];
+    const flag = document.createElement('span');
+    flag.className = 'owner-flag';
+    flag.style.background = owner.color;
+    tile.appendChild(flag);
+    const stage = document.createElement('span');
+    stage.className = 'stage-badge';
+    stage.textContent = `${getBaseStage(owner, planet.key)}단계`;
+    tile.appendChild(stage);
+  });
+}
+
+function renderTokens(){
+  const liveTokens = new Set();
+  players.forEach((p, pi)=>{
+    if(p.bankrupt) return;
+    let token = document.getElementById('token-'+pi);
+    if(!token){
+      token = document.createElement('div');
+      token.className = 'token';
+      token.id = 'token-'+pi;
+      token.style.background = p.color;
+      boardEl.appendChild(token);
+    }
+    liveTokens.add(token.id);
+    placeToken(token, p.position, pi);
+  });
+  document.querySelectorAll('.token').forEach(token=>{
+    if(!liveTokens.has(token.id)) token.remove();
+  });
+}
+
+function placeToken(token, position, playerIndex){
+  const {row,col} = indexToRC(position);
+  const cellW = 100 / BOARD_COLS;
+  const cellH = 100 / BOARD_ROWS;
+  const offsets = [[3,3],[3,25],[3,47],[25,3],[25,25],[25,47]];
+  const off = offsets[playerIndex];
+  token.style.top = `calc(${row * cellH}% + ${off[0]}px)`;
+  token.style.left = `calc(${col * cellW}% + ${off[1]}px)`;
+}
+
+/* ============ RENDER: RAIL ============ */
+const railEl = document.getElementById('rail');
+function renderRail(){
+  railEl.innerHTML = '';
+  players.forEach((p, i)=>{
+    const card = document.createElement('div');
+    card.className = 'player-card' + (i===currentIdx && !p.bankrupt ? ' active' : '') + (p.bankrupt ? ' bankrupt' : '');
+    card.style.setProperty('--player-color', p.color);
+    let status = '';
+    if(p.bankrupt) status = '파산';
+    else if(p.jailTurns > 0) status = `🕳️ 탈출 O/X ${p.jailTurns}회 남음`;
+    else if(p.skipTurn) status = '💫 다음 차례 휴식';
+    card.innerHTML = `
+      <div class="player-top">
+        <div class="player-dot"></div>
+        <div class="player-name">${p.name}</div>
+        <div class="player-turn-tag">탐사 중</div>
+      </div>
+      <div class="player-finance">
+        <div class="finance-part">
+          <span class="finance-label">보유 연구비</span>
+          <strong class="finance-value">${p.money.toLocaleString()}G</strong>
+        </div>
+        <div class="finance-part">
+          <span class="finance-label">기지 자산</span>
+          <strong class="finance-value">${baseAssetValue(p).toLocaleString()}G</strong>
+        </div>
+        <div class="finance-total">
+          <span class="finance-label">총자산</span>
+          <strong class="finance-value">${totalAssets(p).toLocaleString()}G</strong>
+        </div>
+      </div>
+      <div class="player-owned">
+        ${p.owned.map(k=>{
+          const pl = PLANETS.find(x=>x.key===k);
+          return `<span class="owned-chip">${pl.name} ${getBaseStage(p, k)}단계</span>`;
+        }).join('') || '<span style="font-size:11px;color:var(--star-dim);">보유 기지 없음</span>'}
+        ${p.tollPasses ? `<span class="owned-chip">통행료 면제 ${p.tollPasses}</span>` : ''}
+        ${p.quizShields ? `<span class="owned-chip">오답 보험 ${p.quizShields}</span>` : ''}
+        ${p.successPasses ? `<span class="owned-chip">만능 번역기 ${p.successPasses}</span>` : ''}
+        ${p.blackHolePasses ? `<span class="owned-chip">탈출 로켓 ${p.blackHolePasses}</span>` : ''}
+        ${gameRule.type === 'laps' ? `<span class="owned-chip">완주 ${p.laps}바퀴</span>` : ''}
+      </div>
+      <div class="player-status">${status}</div>
+    `;
+    railEl.appendChild(card);
+  });
+}
+
+/* ============ LOG ============ */
+function logMsg(msg){
+  const log = document.getElementById('turnLog');
+  if(!log) return;
+  const line = document.createElement('div');
+  line.textContent = msg;
+  log.prepend(line);
+  while(log.children.length > 5) log.removeChild(log.lastChild);
+}
+
+/* ============ DICE (pip faces + rolling animation) ============ */
+const DIE_PIPS = {
+  1: ['mc'],
+  2: ['tl','br'],
+  3: ['tl','mc','br'],
+  4: ['tl','tr','bl','br'],
+  5: ['tl','tr','mc','bl','br'],
+  6: ['tl','tr','ml','mr','bl','br'],
+};
+function setDieFace(el, value){
+  const on = new Set(DIE_PIPS[value] || []);
+  el.querySelectorAll('.pip').forEach(pip=>{
+    const area = Array.from(pip.classList).find(c=>c.startsWith('pip-')).slice(4);
+    pip.classList.toggle('on', on.has(area));
+  });
+}
+function animateDice(el1, el2, final1, final2, duration, onDone){
+  el1.classList.add('rolling');
+  el2.classList.add('rolling');
+  const spin = setInterval(()=>{
+    setDieFace(el1, 1+Math.floor(Math.random()*6));
+    setDieFace(el2, 1+Math.floor(Math.random()*6));
+  }, 90);
+  setTimeout(()=>{
+    clearInterval(spin);
+    el1.classList.remove('rolling');
+    el2.classList.remove('rolling');
+    setDieFace(el1, final1);
+    setDieFace(el2, final2);
+    onDone && onDone();
+  }, duration);
+}
+
+/* ============ TURN PROMPT / DICE ============ */
+function currentPlayer(){ return players[currentIdx]; }
+
+function renderTurnPrompt(){
+  const el = document.getElementById('turnPrompt');
+  if(!el) return;
+  const p = currentPlayer();
+  if(gameOver){ el.innerHTML = ''; return; }
+  el.innerHTML = `<button class="btn btn-amber" id="rollBtn">🎲 ${p.name}, 주사위 굴리기</button>`;
+  document.getElementById('rollBtn').addEventListener('click', handleRoll);
+}
+
+function nextTurn(){
+  if(gameOver) return;
+  if(roundEndPending && currentIdx >= roundEndPending.endIndex){
+    endGame(roundEndPending.reason, roundEndPending.winner);
+    return;
+  }
+  doublesStreak = 0;
+  let attempts = 0;
+  do{
+    currentIdx = (currentIdx+1) % players.length;
+    attempts++;
+  } while(players[currentIdx].bankrupt && attempts <= players.length);
+  if(players[currentIdx]?.skipTurn){
+    const p = players[currentIdx];
+    p.skipTurn = false;
+    logMsg(`💫 ${p.name}은(는) 관측 기록 정리로 이번 차례를 쉽니다.`);
+    renderRail();
+    setTimeout(nextTurn, 600);
+    return;
+  }
+  renderRail();
+  renderTurnPrompt();
+}
+
+function baseAssetValue(player){
+  return player.owned.reduce((sum, key)=>{
+    const planet = PLANETS.find(item=>item.key === key);
+    if(!planet) return sum;
+    return sum + planet.price + (getBaseStage(player, key) === 2 ? upgradeCost(planet) : 0);
+  }, 0);
+}
+
+function totalAssets(player){
+  return player.money + baseAssetValue(player);
+}
+
+function rankingForRule(){
+  return [...players].sort((a,b)=>{
+    if(gameRule.type === 'laps') return b.laps - a.laps || totalAssets(b) - totalAssets(a);
+    return totalAssets(b) - totalAssets(a) || b.money - a.money;
+  });
+}
+
+function rankingValue(player){
+  if(gameRule.type === 'laps') return `${player.laps}바퀴 · ${totalAssets(player).toLocaleString()}G`;
+  return `총자산 ${totalAssets(player).toLocaleString()}G`;
+}
+
+function endGame(reason, winner=null){
+  if(gameOver) return true;
+  playSound('victory');
+  gameOver = true;
+  if(timerId) clearInterval(timerId);
+  const ranking = rankingForRule();
+  const champion = winner || ranking[0];
+  if(winner){
+    const winnerIndex = ranking.indexOf(winner);
+    if(winnerIndex > 0){ ranking.splice(winnerIndex, 1); ranking.unshift(winner); }
+  }
+  renderTurnPrompt();
+  showModal(`
+    <div class="win-icon">🏆</div>
+    <h3>${champion.name} 원정대 승리!</h3>
+    <p>${reason}</p>
+    <div class="result-list">
+      ${ranking.map((player,index)=>`
+        <div class="result-row">
+          <span>${index + 1}위</span>
+          <span>${player.name}</span>
+          <span>${rankingValue(player)}</span>
+        </div>
+      `).join('')}
+    </div>
+    <button class="btn btn-amber" onclick="location.reload()">새 탐사 시작</button>
+  `, {closable:false});
+  return true;
+}
+
+function lastActivePlayerIndex(){
+  for(let i=players.length-1;i>=0;i--){
+    if(!players[i].bankrupt) return i;
+  }
+  return players.length - 1;
+}
+
+function requestRoundEnd(reason, winner=null){
+  if(roundEndPending) return;
+  roundEndPending = {reason, winner, endIndex:lastActivePlayerIndex()};
+  logMsg('🏁 종료 조건을 달성했습니다. 이번 순서의 마지막 참가자까지 진행합니다.');
+  updateGameStatus();
+}
+
+function checkWin(){
+  if(timeExpired && !roundEndPending){
+    requestRoundEnd('제한 시간이 끝났습니다. 현금과 기지 가치를 합친 총자산으로 순위를 정했습니다.');
+  }
+  if(gameRule.type === 'laps'){
+    const winner = players.find(player=>!player.bankrupt && player.laps >= gameRule.target);
+    if(winner && !roundEndPending) requestRoundEnd(`${gameRule.target}바퀴를 먼저 완주했습니다.`, winner);
+  }
+  const alive = players.filter(p=>!p.bankrupt);
+  if(alive.length === 1 && players.length > 1){
+    return endGame('다른 원정대가 모두 예산을 소진했습니다.', alive[0]);
+  }
+  if(roundEndPending && currentIdx >= roundEndPending.endIndex){
+    return endGame(roundEndPending.reason, roundEndPending.winner);
+  }
+  return false;
+}
+
+function showBlackHoleEscapeQuiz(p){
+  const q = drawEscapeOX();
+  showModal(`
+    <h3>🕳️ 블랙홀 탈출 O/X</h3>
+    <p>${q.q}</p>
+    <div id="escapeQuizOpts"></div>
+    <div id="escapeExplanation" class="answer-box" style="display:none;"></div>
+    <div id="escapeAction"></div>
+  `, {closable:false});
+  const options = document.getElementById('escapeQuizOpts');
+  q.opts.forEach((option,index)=>{
+    const button = document.createElement('button');
+    button.className = 'quiz-opt';
+    button.textContent = option;
+    button.onclick = ()=>{
+      Array.from(options.children).forEach(item=>item.onclick=null);
+      const correct = index === q.a;
+      button.classList.add(correct ? 'correct' : 'wrong');
+      options.children[q.a].classList.add('correct');
+      playSound(correct ? 'correct' : 'wrong');
+      const explanation = document.getElementById('escapeExplanation');
+      explanation.style.display = 'block';
+      explanation.innerHTML = `<b>정답 ${q.opts[q.a]}</b> · ${q.explanation}`;
+      if(correct){
+        p.jailTurns = 0;
+        logMsg(`🕳️ ${p.name}이(가) O/X 문제를 맞혀 블랙홀에서 탈출했습니다!`);
+        document.getElementById('escapeAction').innerHTML = '<button class="btn btn-amber btn-block" id="escapeRoll">탈출하고 주사위 굴리기</button>';
+        document.getElementById('escapeRoll').onclick = ()=>{ closeModal(); renderRail(); handleRoll(); };
+      } else {
+        p.jailTurns = Math.max(0, p.jailTurns - 1);
+        const message = p.jailTurns > 0 ? `다음 차례에 다시 도전합니다. 남은 기회 ${p.jailTurns}번` : '블랙홀에서는 벗어났지만 이동은 다음 차례에 합니다.';
+        logMsg(`🕳️ ${p.name}이(가) 탈출 문제를 틀렸습니다. ${message}`);
+        document.getElementById('escapeAction').innerHTML = `<p>${message}</p><button class="btn btn-amber btn-block" id="escapeWait">다음 차례로</button>`;
+        document.getElementById('escapeWait').onclick = ()=>{ closeModal(); renderRail(); nextTurn(); };
+      }
+    };
+    options.appendChild(button);
+  });
+}
+
+function handleRoll(){
+  const rollBtn = document.getElementById('rollBtn');
+  if(rollBtn) rollBtn.disabled = true;
+  const p = currentPlayer();
+  const die1 = document.getElementById('die1');
+  const die2 = document.getElementById('die2');
+
+  if(p.jailTurns > 0){
+    if(p.blackHolePasses > 0){
+      p.blackHolePasses--;
+      p.jailTurns = 0;
+      logMsg(`🚀 ${p.name}이(가) 블랙홀 비상 탈출 로켓을 사용해 즉시 탈출했습니다!`);
+      renderRail();
+    } else {
+      showBlackHoleEscapeQuiz(p);
+      return;
+    }
+  }
+
+  playSound('dice');
+  const d1 = 1+Math.floor(Math.random()*6);
+  const d2 = 1+Math.floor(Math.random()*6);
+  animateDice(die1, die2, d1, d2, 700, ()=>{
+    if(d1 === d2){
+      doublesStreak++;
+      if(doublesStreak >= 3){
+        logMsg(`💫 ${p.name}, 더블을 3번 연속! 블랙홀로 빨려 들어갑니다.`);
+        p.position = 6;
+        if(p.blackHolePasses > 0){
+          p.blackHolePasses--;
+          p.jailTurns = 0;
+          logMsg(`🚀 ${p.name}이(가) 탈출 로켓을 사용해 블랙홀에서 즉시 벗어났습니다.`);
+        } else {
+          p.jailTurns = 3;
+        }
+        doublesStreak = 0;
+        renderTokens();
+        renderRail();
+        setTimeout(nextTurn, 600);
+        return;
+      }
+    }
+    setTimeout(()=>{ movePlayer(p, d1+d2, d1===d2); }, 700);
+  });
+}
+
+function movePlayer(p, steps, isDouble){
+  const startPosition = p.position;
+  const passedStart = (startPosition + steps) >= BOARD_TILE_COUNT;
+  const playerIndex = players.indexOf(p);
+  const token = document.getElementById('token-'+playerIndex);
+  let moved = 0;
+
+  if(token) token.classList.add('moving');
+  logMsg(`🧭 ${p.name}이(가) ${steps}칸 이동합니다.`);
+
+  function stepForward(){
+    moved++;
+    p.position = (p.position + 1) % BOARD_TILE_COUNT;
+    renderTokens();
+    playSound('move', moved);
+
+    if(moved < steps){
+      setTimeout(stepForward, MOVE_STEP_MS);
+      return;
+    }
+
+    if(token) token.classList.remove('moving');
+    if(passedStart){
+      p.laps++;
+      p.money += PASS_START_BONUS;
+      logMsg(`🚩 ${p.name}이(가) ${p.laps}바퀴를 완주하고 연구 지원금 ${PASS_START_BONUS}G를 받았습니다.`);
+    }
+    renderRail();
+    setTimeout(()=> resolveTile(p, isDouble), ARRIVAL_PAUSE_MS);
+  }
+
+  stepForward();
+}
+
+function movePlayerBackward(p, steps, isDouble){
+  const playerIndex = players.indexOf(p);
+  const token = document.getElementById('token-'+playerIndex);
+  let moved = 0;
+  if(token) token.classList.add('moving');
+  logMsg(`🔧 ${p.name}이(가) 뒤로 ${steps}칸 이동합니다.`);
+
+  function stepBackward(){
+    moved++;
+    p.position = (p.position - 1 + BOARD_TILE_COUNT) % BOARD_TILE_COUNT;
+    renderTokens();
+    playSound('move', moved);
+    if(moved < steps){
+      setTimeout(stepBackward, MOVE_STEP_MS);
+      return;
+    }
+    if(token) token.classList.remove('moving');
+    setTimeout(()=>resolveTile(p, isDouble), ARRIVAL_PAUSE_MS);
+  }
+  stepBackward();
+}
+
+/* ============ TILE RESOLUTION ============ */
+function resolveTile(p, isDouble){
+  const d = BOARD[p.position];
+  if(d.type === 'planet'){
+    const ownerIdx = getOwnerIndex(d.planet.key);
+    const visitorIdx = players.indexOf(p);
+    if(ownerIdx !== -1 && ownerIdx !== visitorIdx){
+      playSound('toll');
+      showPlanetTile(p, d, isDouble);
+      return;
+    }
+  }
+  showArrivalNotice(p, d, isDouble);
+}
+
+function showArrivalNotice(p, d, isDouble){
+  renderJournal(null);
+  playSound('arrival');
+  showModal(`
+    <h3>${d.icon} ${d.name} 도착</h3>
+    <p>${arrivalText(p, d)}</p>
+    <button class="btn btn-amber btn-block" id="arrivalNext">다음</button>
+  `, {closable:false});
+  document.getElementById('arrivalNext').onclick = ()=>{
+    closeModal();
+    continueTileAction(p, d, isDouble);
+  };
+}
+
+function arrivalText(p, d){
+  if(d.type === 'planet'){
+    const ownerIdx = getOwnerIndex(d.planet.key);
+    if(ownerIdx === -1) return `${d.planet.name}은(는) 아직 주인이 없는 행성입니다. 퀴즈 3문제 중 2문제 이상 맞히면 기지를 건설할 수 있습니다.`;
+    const owner = players[ownerIdx];
+    const stage = getBaseStage(owner, d.planet.key);
+    if(owner === p && stage < 2) return `${d.planet.name}은(는) 나의 ${stage}단계 기지입니다. 퀴즈를 통과하면 2단계 기지로 진화할 수 있습니다.`;
+    if(owner === p) return `${d.planet.name}은(는) 나의 2단계 기지입니다. 이미 최고 단계까지 진화했습니다.`;
+    return `${d.planet.name}은(는) ${owner.name}의 ${stage}단계 기지입니다. 통행료 ${tollFor(d.planet, stage)}G가 필요합니다.`;
+  }
+  if(d.type === 'body') return `${d.body.name}의 특징을 관측 기록장에 정리합니다.`;
+  if(d.type === 'quiz') return '태양계 구성원과 행성 특징을 확인하는 퀴즈로 이동합니다.';
+  if(d.type === 'mission') return '말로 설명하고 정답 확인까지 할 수 있는 태양계 미션입니다.';
+  if(d.type === 'blackhole') return '블랙홀에 빠졌습니다. 다음 차례에 행성 O/X 문제를 맞히면 바로 탈출할 수 있습니다.';
+  if(d.type === 'station') return '우주 정거장에서 통신과 장비를 점검합니다.';
+  return '출발지에 도착했습니다.';
+}
+
+function continueTileAction(p, d, isDouble){
+  if(d.type === 'start'){
+    logMsg(`🚩 ${p.name}이(가) 출발지에 도착했습니다.`);
+    finishStep(p, isDouble);
+  }
+  else if(d.type === 'blackhole'){
+    if(p.blackHolePasses > 0){
+      p.blackHolePasses--;
+      p.jailTurns = 0;
+      logMsg(`🚀 ${p.name}이(가) 탈출 로켓을 사용해 블랙홀에서 즉시 벗어났습니다.`);
+      renderRail();
+      finishStep(p, isDouble);
+    } else {
+      logMsg(`🕳️ ${p.name}이(가) 블랙홀에 빠졌습니다. 다음 차례부터 O/X 탈출 문제에 도전합니다.`);
+      p.jailTurns = 3;
+      renderRail();
+      setTimeout(nextTurn, 700);
+    }
+  }
+  else if(d.type === 'station'){
+    logMsg(`📡 ${p.name}이(가) 우주 정거장에 도착했습니다. 안전하게 통신을 점검하고 다음 턴을 준비합니다.`);
+    finishStep(p, isDouble);
+  }
+  else if(d.type === 'planet'){
+    if(!observationRecords[d.planet.key]){
+      showObservationRecord(p, d.planet, ()=>showPlanetTile(p, d, isDouble));
+    } else {
+      showPlanetTile(p, d, isDouble);
+    }
+  }
+  else if(d.type === 'body'){
+    if(!bodyObservationRecords[d.body.key]){
+      showBodyObservationRecord(p, d.body, ()=>showBodyTile(p, d, isDouble));
+    } else {
+      showBodyTile(p, d, isDouble);
+    }
+  }
+  else if(d.type === 'quiz'){
+    showQuizTile(p, isDouble);
+  }
+  else if(d.type === 'mission'){
+    showMissionTile(p, d, isDouble);
+  }
+}
+
+function finishStep(p, isDouble){
+  renderJournal(null);
+  if(checkWin()) return;
+  if(roundEndPending){
+    nextTurn();
+    return;
+  }
+  if(isDouble && p.jailTurns === 0 && !p.bankrupt){
+    logMsg(`✨ 더블이 나와 ${p.name}이(가) 한 번 더 굴립니다!`);
+    renderTurnPrompt();
+  } else {
+    nextTurn();
+  }
+}
+
+function goBankrupt(p){
+  const donated = p.owned.reduce((sum,key)=>{
+    const planet = PLANETS.find(item=>item.key === key);
+    if(!planet) return sum;
+    return sum + planet.price + (getBaseStage(p, key) === 2 ? upgradeCost(planet) : 0);
+  }, 0);
+  p.bankrupt = true;
+  p.money = 0;
+  p.owned = [];
+  p.baseStages = {};
+  const donationText = donated > 0 ? `기지 투자금 ${donated.toLocaleString()}G는 우주 발전을 위해 사용됩니다.` : '보유한 기지는 없습니다.';
+  logMsg(`💥 ${p.name} 원정대의 예산이 바닥나 파산했습니다. ${donationText}`);
+  renderTileMarkers();
+  renderRail();
+}
+
+function getQuizSequence(count){
+  const pool = [...QUIZ_BANK];
+  const sequence = [];
+  while(sequence.length < count && pool.length){
+    const pick = Math.floor(Math.random() * pool.length);
+    sequence.push(pool.splice(pick, 1)[0]);
+  }
+  return sequence;
+}
+
+function startQuizChallenge(p, config){
+  const questions = config.questions ? [...config.questions] : getQuizSequence(config.count || 3);
+  const minCorrect = config.minCorrect || questions.length;
+  let index = 0;
+  let correct = 0;
+
+  function showChallengeResult(){
+    const passed = correct >= minCorrect;
+    showModal(`
+      <h3>${passed ? '허가 퀴즈 통과' : '허가 퀴즈 아쉬움'}</h3>
+      <p>${questions.length}문제 중 ${minCorrect}문제 이상 맞혀야 합니다.</p>
+      <div class="modal-amount ${passed ? 'pos' : 'neg'}">${correct}/${questions.length}</div>
+      ${passed ? `
+        <p style="margin-bottom:10px;">${config.confirmText}</p>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-ghost" style="flex:1;" id="quizChallengeDecline">${config.cancelLabel || '이번에는 안 하기'}</button>
+          <button class="btn btn-amber" style="flex:1;" id="quizChallengeDone">${config.confirmLabel}</button>
+        </div>
+      ` : `
+        <p style="margin-bottom:10px;">이번에는 허가를 받지 못했습니다. 다음 방문 때 다시 도전하세요.</p>
+        <button class="btn btn-amber btn-block" id="quizChallengeFail">확인</button>
+      `}
+    `, {closable:false});
+    logMsg(`🔑 ${p.name}이(가) ${config.logLabel} 퀴즈를 풀었습니다. (${correct}/${questions.length})`);
+    if(passed){
+      document.getElementById('quizChallengeDone').onclick = ()=>{
+        closeModal();
+        config.onComplete(correct, questions.length);
+      };
+      document.getElementById('quizChallengeDecline').onclick = ()=>{
+        closeModal();
+        config.onDecline();
+      };
+    } else {
+      document.getElementById('quizChallengeFail').onclick = ()=>{
+        closeModal();
+        config.onFail(correct, questions.length);
+      };
+    }
+  }
+
+  function renderQuestion(){
+    const q = questions[index];
+    renderJournalQuiz(q);
+    showModal(`
+      <h3>${config.title}</h3>
+      <p>${config.intro}</p>
+      <p style="font-weight:700; color:#8a5a14;">${index + 1} / ${questions.length} 문제</p>
+      <p>${q.q}</p>
+      <div id="quizOpts"></div>
+      <div id="quizExplanation" class="answer-box" style="display:none;"></div>
+      <div id="quizNextWrap"></div>
+    `, {closable:false});
+
+    const optsWrap = document.getElementById('quizOpts');
+    q.opts.forEach((opt,i)=>{
+      const b = document.createElement('button');
+      b.className = 'quiz-opt';
+      b.textContent = opt;
+      b.onclick = ()=>{
+        Array.from(optsWrap.children).forEach(c=>{ c.onclick=null; c.disabled=true; });
+        const isCorrect = i === q.a;
+        if(isCorrect){
+          playSound('correct');
+          correct++;
+          b.classList.add('correct');
+        } else {
+          playSound('wrong');
+          b.classList.add('wrong');
+          optsWrap.children[q.a].classList.add('correct');
+        }
+        const explanation = document.getElementById('quizExplanation');
+        explanation.style.display = 'block';
+        explanation.innerHTML = `<b>정답 ${q.opts[q.a]}</b>${q.explanation ? ` · ${q.explanation}` : ''}`;
+        const isLast = index === questions.length - 1;
+        document.getElementById('quizNextWrap').innerHTML = `<button class="btn btn-amber btn-block" id="quizNext">${isLast ? '결과 확인' : '다음 문제'}</button>`;
+        document.getElementById('quizNext').onclick = ()=>{
+          index++;
+          if(index < questions.length){
+            renderQuestion();
+          } else {
+            showChallengeResult();
+          }
+        };
+      };
+      optsWrap.appendChild(b);
+    });
+  }
+
+  renderQuestion();
+}
+
+function buildBaseAfterQuiz(p, planet, isDouble){
+  if(p.money < planet.price){
+    showModal(`
+      <h3>예산 부족</h3>
+      <p>${planet.name}에 1단계 탐사 기지를 세우려면 ${planet.price}G가 필요합니다.</p>
+      <button class="btn btn-amber btn-block" id="budgetOk">확인</button>
+    `, {closable:false});
+    document.getElementById('budgetOk').onclick = ()=>{ closeModal(); finishStep(p, isDouble); };
+    return;
+  }
+  p.money -= planet.price;
+  p.owned.push(planet.key);
+  p.baseStages[planet.key] = 1;
+  playSound('build');
+  logMsg(`🏗️ ${p.name}이(가) ${planet.name}에 1단계 탐사 기지를 건설했습니다. (-${planet.price}G)`);
+  renderTileMarkers();
+  renderRail();
+  finishStep(p, isDouble);
+}
+
+function upgradeBaseAfterQuiz(p, planet, isDouble){
+  const cost = upgradeCost(planet);
+  if(p.money < cost){
+    showModal(`
+      <h3>예산 부족</h3>
+      <p>${planet.name} 기지를 2단계로 진화하려면 ${cost}G가 필요합니다.</p>
+      <button class="btn btn-amber btn-block" id="budgetOk">확인</button>
+    `, {closable:false});
+    document.getElementById('budgetOk').onclick = ()=>{ closeModal(); finishStep(p, isDouble); };
+    return;
+  }
+  p.money -= cost;
+  p.baseStages[planet.key] = 2;
+  playSound('build');
+  logMsg(`🏛️ ${p.name}이(가) ${planet.name} 기지를 2단계로 진화시켰습니다. (-${cost}G)`);
+  renderTileMarkers();
+  renderRail();
+  finishStep(p, isDouble);
+}
+
+function showObservationRecord(p, planet, onDone){
+  const selections = {order:null, composition:null, ring:null};
+  showModal(`
+    <h3>🔭 ${planet.name} 첫 관측 기록</h3>
+    <div class="planet-visual planet-${planet.key} ${planet.ring ? 'ring' : ''}"></div>
+    <p>버튼을 눌러 ${planet.name}의 특징을 직접 기록하세요.</p>
+
+    <div class="card-field"><div class="lb">태양에서 몇 번째로 가까울까요?</div></div>
+    <div class="choice-grid" data-group="order">
+      ${PLANETS.map(pl=>`<button class="record-choice" data-field="order" data-value="${pl.order}">${pl.order}번째</button>`).join('')}
+    </div>
+
+    <div class="card-field"><div class="lb">행성의 종류는?</div></div>
+    <div class="choice-grid" data-group="composition">
+      <button class="record-choice" data-field="composition" data-value="암석">암석 행성</button>
+      <button class="record-choice" data-field="composition" data-value="기체">기체 행성</button>
+    </div>
+
+    <div class="card-field"><div class="lb">고리가 있나요?</div></div>
+    <div class="choice-grid" data-group="ring">
+      <button class="record-choice" data-field="ring" data-value="true">고리 있음</button>
+      <button class="record-choice" data-field="ring" data-value="false">고리 없음</button>
+    </div>
+
+    <div id="recordAnswer" class="answer-box" style="display:none;"></div>
+    <button class="btn btn-amber btn-block" id="checkRecord" disabled>정답 확인</button>
+    <button class="btn btn-amber btn-block" id="continueRecord" style="display:none;">기록하고 계속</button>
+  `, {closable:false});
+
+  document.querySelectorAll('.record-choice').forEach(button=>{
+    button.onclick = ()=>{
+      const field = button.dataset.field;
+      selections[field] = button.dataset.value;
+      document.querySelectorAll(`[data-field="${field}"]`).forEach(btn=>btn.classList.remove('selected'));
+      button.classList.add('selected');
+      document.getElementById('checkRecord').disabled = !selections.order || !selections.composition || !selections.ring;
+    };
+  });
+
+  document.getElementById('checkRecord').onclick = ()=>{
+    const correct = {
+      order: String(planet.order),
+      composition: planet.composition,
+      ring: String(planet.ring),
+    };
+    document.querySelectorAll('.record-choice').forEach(button=>{
+      const field = button.dataset.field;
+      const value = button.dataset.value;
+      if(value === correct[field]) button.classList.add('correct');
+      if(selections[field] === value && value !== correct[field]) button.classList.add('wrong');
+      button.disabled = true;
+    });
+    document.getElementById('recordAnswer').style.display = 'block';
+    document.getElementById('recordAnswer').innerHTML = `
+      <b>정답</b><br>
+      태양에서 ${planet.order}번째 · ${planet.composition} 행성 · ${planet.ring ? '고리 있음' : '고리 없음'}<br>
+      <span style="color:#6b6046;">${planet.desc}</span>
+    `;
+    document.getElementById('checkRecord').style.display = 'none';
+    document.getElementById('continueRecord').style.display = 'block';
+  };
+
+  document.getElementById('continueRecord').onclick = ()=>{
+    observationRecords[planet.key] = {
+      name: planet.name,
+      order: planet.order,
+      composition: planet.composition,
+      ring: planet.ring,
+      colorText: planet.colorText,
+      surface: planet.surface,
+      desc: planet.desc,
+      observer: p.name,
+    };
+    logMsg(`🔭 ${p.name}이(가) ${planet.name} 관측 기록을 완성했습니다.`);
+    closeModal();
+    onDone();
+  };
+}
+
+/* ---- Planet tile ---- */
+function showPlanetTile(p, d, isDouble){
+  const planet = d.planet;
+  const ownerIdx = getOwnerIndex(planet.key);
+
+  if(ownerIdx === -1){
+    // unowned - offer first-stage base
+    showModal(`
+      <h3>${planet.name} 도착</h3>
+      <p>${planet.desc}</p>
+      <div class="modal-amount" style="color:var(--amber-deep,#C97F1E)">${planet.price}G</div>
+      <p style="margin-bottom:10px;">퀴즈 3문제 중 2문제 이상 맞히면 건설할 수 있습니다. 1단계 탐사 기지를 건설하시겠습니까?</p>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-ghost" style="flex:1;" id="skipBuy">건너뛰기</button>
+        <button class="btn btn-amber" style="flex:1;" id="doBuy" ${p.money < planet.price ? 'disabled' : ''}>1단계 건설</button>
+      </div>
+    `, {closable:false});
+    document.getElementById('skipBuy').onclick = ()=>{ closeModal(); finishStep(p, isDouble); };
+    document.getElementById('doBuy').onclick = ()=>{
+      startQuizChallenge(p, {
+        title: '건설 허가 퀴즈',
+        intro: `${planet.name} 기지 건설 허가를 받으려면 3문제 중 2문제 이상 맞혀야 합니다.`,
+        logLabel: `${planet.name} 건설 허가`,
+        questions: BASE_QUIZ_BANK[planet.key].slice(0, 3),
+        minCorrect: 2,
+        confirmText: `${planet.name}에 1단계 탐사 기지를 건설하시겠습니까?`,
+        confirmLabel: '건설하기',
+        cancelLabel: '건설 안 함',
+        onComplete: ()=> buildBaseAfterQuiz(p, planet, isDouble),
+        onDecline: ()=> finishStep(p, isDouble),
+        onFail: ()=> finishStep(p, isDouble),
+      });
+    };
+  } else if(ownerIdx === players.indexOf(p)){
+    const stage = getBaseStage(p, planet.key);
+    const cost = upgradeCost(planet);
+    if(stage < 2){
+      showModal(`
+        <h3>${planet.name} 재방문</h3>
+        <p>${planet.desc}</p>
+        <p>현재 <b>1단계 탐사 기지</b>입니다. 퀴즈 3문제 중 2문제 이상 맞히면 2단계 관측 기지로 진화할 수 있고 통행료가 ${tollFor(planet, 2)}G로 올라갑니다.</p>
+        <div class="modal-amount" style="color:var(--amber-deep,#C97F1E)">${cost}G</div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-ghost" style="flex:1;" id="skipUpgrade">그대로 두기</button>
+          <button class="btn btn-amber" style="flex:1;" id="doUpgrade" ${p.money < cost ? 'disabled' : ''}>2단계 진화</button>
+        </div>
+      `, {closable:false});
+      document.getElementById('skipUpgrade').onclick = ()=>{ closeModal(); finishStep(p, isDouble); };
+      document.getElementById('doUpgrade').onclick = ()=>{
+        startQuizChallenge(p, {
+          title: '진화 허가 퀴즈',
+          intro: `${planet.name} 기지 진화 허가를 받으려면 3문제 중 2문제 이상 맞혀야 합니다.`,
+          logLabel: `${planet.name} 진화 허가`,
+          questions: BASE_QUIZ_BANK[planet.key].slice(3, 6),
+          minCorrect: 2,
+          confirmText: `${planet.name} 기지를 2단계로 진화하시겠습니까?`,
+          confirmLabel: '진화하기',
+          cancelLabel: '진화 안 함',
+          onComplete: ()=> upgradeBaseAfterQuiz(p, planet, isDouble),
+          onDecline: ()=> finishStep(p, isDouble),
+          onFail: ()=> finishStep(p, isDouble),
+        });
+      };
+      return;
+    }
+    showModal(`
+      <h3>${planet.name}</h3>
+      <p>${planet.desc}</p>
+      <p style="color:var(--amber-deep,#C97F1E); font-weight:700;">이미 2단계까지 진화한 탐사 기지입니다.</p>
+      <button class="btn btn-amber btn-block" id="okClose">확인</button>
+    `, {closable:false});
+    document.getElementById('okClose').onclick = ()=>{ closeModal(); finishStep(p, isDouble); };
+  } else {
+    const owner = players[ownerIdx];
+    const stage = getBaseStage(owner, planet.key);
+    const toll = tollFor(planet, stage);
+    const payableToll = Math.min(toll, p.money);
+    const takeover = buyoutCost(planet, stage);
+    showModal(`
+      <h3>${planet.name}</h3>
+      <p>${planet.desc}</p>
+      <p>이곳은 <b>${owner.name}</b>의 <b>${stage}단계</b> 탐사 기지입니다.</p>
+      <div class="modal-amount neg">-${toll}G</div>
+      <p style="margin-bottom:10px;">${p.tollPasses > 0 ? '면제권을 사용하거나 기지를 인수할 수 있습니다.' : p.money < toll ? `보유금이 ${p.money}G라 통행료가 부족합니다. 남은 돈을 모두 지급하면 파산합니다.` : '통행료를 내거나, 충분한 예산이 있으면 기지를 인수할 수 있습니다.'}</p>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-ghost" style="flex:1;" id="payToll">${p.tollPasses > 0 ? '면제권 사용' : p.money < toll ? `${payableToll}G 지급·파산` : `${toll}G 통행료`}</button>
+        <button class="btn btn-amber" style="flex:1;" id="takeOver" ${p.money < takeover ? 'disabled' : ''}>${takeover}G 인수</button>
+      </div>
+    `, {closable:false});
+    document.getElementById('payToll').onclick = ()=>{
+      let bankruptFromToll = false;
+      if(p.tollPasses > 0){
+        p.tollPasses--;
+        logMsg(`🪙 ${p.name}이(가) 통행료 면제권으로 ${planet.name} 통행료를 면제받았습니다.`);
+      } else {
+        p.money -= payableToll;
+        owner.money += payableToll;
+        if(payableToll < toll){
+          bankruptFromToll = true;
+          logMsg(`💸 ${p.name}이(가) 남은 ${payableToll}G를 모두 지불했지만 통행료 ${toll}G가 부족합니다.`);
+        } else {
+          logMsg(`💸 ${p.name}이(가) ${owner.name}에게 ${stage}단계 통행료 ${toll}G를 지불했습니다.`);
+        }
+      }
+      renderRail();
+      closeModal();
+      if(bankruptFromToll) goBankrupt(p);
+      finishStep(p, isDouble);
+    };
+    document.getElementById('takeOver').onclick = ()=>{
+      startQuizChallenge(p, {
+        title:'인수 허가 O/X',
+        intro:`${planet.name} 기지를 인수하려면 O/X 3문제 중 2문제 이상 맞혀야 합니다.`,
+        logLabel:`${planet.name} 인수 허가`,
+        questions:shuffleQuestions(BASE_QUIZ_BANK[planet.key]).slice(0, 3),
+        minCorrect:2,
+        confirmText:`${takeover}G를 내고 ${planet.name} ${stage}단계 기지를 인수하시겠습니까?`,
+        confirmLabel:'인수하기',
+        cancelLabel:'인수 안 함',
+        onComplete:()=>{
+          p.money -= takeover;
+          owner.money += takeover;
+          owner.owned = owner.owned.filter(key=>key !== planet.key);
+          delete owner.baseStages[planet.key];
+          p.owned.push(planet.key);
+          p.baseStages[planet.key] = stage;
+          logMsg(`🔁 ${p.name}이(가) ${owner.name}에게 ${takeover}G를 내고 ${planet.name} ${stage}단계 기지를 인수했습니다.`);
+          renderTileMarkers();
+          renderRail();
+          finishStep(p, isDouble);
+        },
+        onDecline:()=>finishStep(p, isDouble),
+        onFail:()=>finishStep(p, isDouble),
+      });
+    };
+  }
+}
+
+/* ---- Solar-system body tile ---- */
+function showBodyObservationRecord(p, body, onDone){
+  const selections = {category:null, feature:null};
+  const correct = {
+    category: body.category,
+    feature: BODY_OBSERVATION_DATA[body.key].feature,
+  };
+  const features = ['스스로 빛을 낸다','지구 주위를 돈다','화성과 목성 사이에 많이 있다','태양 가까이에서 꼬리가 생긴다'];
+  showModal(`
+    <h3>${body.icon} ${body.name} 첫 관측 기록</h3>
+    <p>알맞은 버튼을 골라 ${body.name} 관측일지를 완성하세요.</p>
+
+    <div class="card-field"><div class="lb">어떤 천체인가요?</div></div>
+    <div class="choice-grid three">
+      ${['별(항성)','위성','작은 천체'].map(value=>`<button class="record-choice body-choice" data-field="category" data-value="${value}">${value}</button>`).join('')}
+    </div>
+
+    <div class="card-field"><div class="lb">가장 알맞은 특징은?</div></div>
+    <div class="choice-grid">
+      ${features.map(value=>`<button class="record-choice body-choice" data-field="feature" data-value="${value}">${value}</button>`).join('')}
+    </div>
+
+    <div id="bodyRecordAnswer" class="answer-box" style="display:none;"></div>
+    <button class="btn btn-amber btn-block" id="checkBodyRecord" disabled>정답 확인</button>
+    <button class="btn btn-amber btn-block" id="continueBodyRecord" style="display:none;">기록하고 계속</button>
+  `, {closable:false});
+
+  document.querySelectorAll('.body-choice').forEach(button=>{
+    button.onclick = ()=>{
+      const field = button.dataset.field;
+      selections[field] = button.dataset.value;
+      document.querySelectorAll(`.body-choice[data-field="${field}"]`).forEach(item=>item.classList.remove('selected'));
+      button.classList.add('selected');
+      document.getElementById('checkBodyRecord').disabled = !selections.category || !selections.feature;
+    };
+  });
+
+  document.getElementById('checkBodyRecord').onclick = ()=>{
+    let allCorrect = true;
+    document.querySelectorAll('.body-choice').forEach(button=>{
+      const field = button.dataset.field;
+      const value = button.dataset.value;
+      if(value === correct[field]) button.classList.add('correct');
+      if(selections[field] === value && value !== correct[field]){
+        button.classList.add('wrong');
+        allCorrect = false;
+      }
+      button.disabled = true;
+    });
+    playSound(allCorrect ? 'correct' : 'wrong');
+    document.getElementById('bodyRecordAnswer').style.display = 'block';
+    document.getElementById('bodyRecordAnswer').innerHTML = `<b>정답</b><br>${correct.category} · ${correct.feature}<br><span style="color:#6b6046;">${body.desc}</span>`;
+    document.getElementById('checkBodyRecord').style.display = 'none';
+    document.getElementById('continueBodyRecord').style.display = 'block';
+  };
+
+  document.getElementById('continueBodyRecord').onclick = ()=>{
+    bodyObservationRecords[body.key] = {
+      name:body.name,
+      category:correct.category,
+      feature:correct.feature,
+      desc:body.desc,
+      observer:p.name,
+    };
+    logMsg(`${body.icon} ${p.name}이(가) ${body.name} 관측일지를 완성했습니다.`);
+    closeModal();
+    onDone();
+  };
+}
+
+function showBodyTile(p, d, isDouble){
+  const body = d.body;
+  showModal(`
+    <h3>${body.icon} ${body.name} 관측</h3>
+    <p>${body.desc}</p>
+    <div class="modal-amount pos">+80G</div>
+    <p style="margin-bottom:10px;">관측 카드에 특징을 정리했습니다.</p>
+    <button class="btn btn-amber btn-block" id="bodyOk">확인</button>
+  `, {closable:false});
+  document.getElementById('bodyOk').onclick = ()=>{
+    p.money += 80;
+    logMsg(`${body.icon} ${p.name}이(가) ${body.name} 관측 카드를 완성했습니다. (+80G)`);
+    renderRail();
+    closeModal();
+    finishStep(p, isDouble);
+  };
+}
+
+/* ---- Mission tile ---- */
+function showMissionTile(p, d, isDouble){
+  const mission = MISSION_BANK[Math.floor(Math.random()*MISSION_BANK.length)];
+  showModal(`
+    <h3>🎤 ${mission.title}</h3>
+    <p>${mission.prompt}</p>
+    ${mission.seconds ? `
+      <div class="answer-box" style="text-align:center;">
+        <div id="missionTimerDisplay" style="font-family:'Jua'; font-size:32px; margin-bottom:8px;">${mission.seconds}초</div>
+        <button class="btn btn-amber btn-block" id="startMissionTimer">타이머 시작</button>
+      </div>
+    ` : ''}
+    ${p.successPasses > 0 ? `<button class="btn btn-amber btn-block" id="useMissionTranslator">만능 우주 번역기 사용 (${p.successPasses}개)</button>` : ''}
+    <div id="missionAnswer" class="answer-box" style="display:none;">
+      <b>정답 확인</b><br>${mission.answer}
+    </div>
+    <div style="display:flex; gap:8px; margin-bottom:8px;">
+      <button class="btn btn-ghost" style="flex:1;" id="showMissionAnswer" ${mission.seconds ? 'disabled' : ''}>정답 확인</button>
+      <button class="btn btn-amber" style="flex:1;" id="missionSuccess" disabled>성공 +100G</button>
+    </div>
+    <button class="btn btn-ghost btn-block" id="missionMiss" disabled>아쉬워요 -30G</button>
+  `, {closable:false});
+  let missionTimerId = null;
+  const timerButton = document.getElementById('startMissionTimer');
+  if(timerButton) timerButton.onclick = ()=>{
+    timerButton.disabled = true;
+    let remaining = mission.seconds;
+    const display = document.getElementById('missionTimerDisplay');
+    display.textContent = `${remaining}초`;
+    missionTimerId = setInterval(()=>{
+      remaining--;
+      if(remaining > 0){
+        display.textContent = `${remaining}초`;
+        return;
+      }
+      clearInterval(missionTimerId);
+      missionTimerId = null;
+      display.textContent = '시간 종료!';
+      timerButton.textContent = '5초 도전 완료';
+      document.getElementById('showMissionAnswer').disabled = false;
+      playTone(880,.18,'sine',.08);
+      playTone(660,.28,'sine',.08,.16);
+    }, 1000);
+  };
+  function completeMission(success, usedTranslator=false){
+    if(missionTimerId) clearInterval(missionTimerId);
+    playSound(success ? 'correct' : 'wrong');
+    if(success){
+      p.money += 100;
+      logMsg(`🎤 ${p.name}이(가) ${usedTranslator ? '만능 우주 번역기로 ' : ''}미션 성공! ${mission.title} (+100G)`);
+    } else {
+      p.money = Math.max(0, p.money - 30);
+      logMsg(`🎤 ${p.name}이(가) 미션을 다시 연습합니다. ${mission.title} (-30G)`);
+    }
+    renderRail();
+    closeModal();
+    if(p.money <= 0) goBankrupt(p);
+    finishStep(p, isDouble);
+  }
+  const translator = document.getElementById('useMissionTranslator');
+  if(translator) translator.onclick = ()=>{
+    p.successPasses--;
+    completeMission(true, true);
+  };
+  document.getElementById('showMissionAnswer').onclick = ()=>{
+    document.getElementById('missionAnswer').style.display = 'block';
+    document.getElementById('missionSuccess').disabled = false;
+    document.getElementById('missionMiss').disabled = false;
+    document.getElementById('showMissionAnswer').disabled = true;
+  };
+  document.getElementById('missionSuccess').onclick = ()=>completeMission(true);
+  document.getElementById('missionMiss').onclick = ()=>completeMission(false);
+}
+
+/* ---- Quiz tile ---- */
+function showQuizTile(p, isDouble){
+  const q = drawSpaceQuiz();
+  showModal(`
+    <h3>🔑 우주 퀴즈</h3>
+    <p>${q.q}</p>
+    ${p.successPasses > 0 ? `<button class="btn btn-amber btn-block" id="useQuizTranslator">만능 우주 번역기 사용 (${p.successPasses}개)</button>` : ''}
+    <div id="quizOpts"></div>
+    <div id="spaceQuizAnswer" class="answer-box" style="display:none;"></div>
+    <div id="spaceQuizNext"></div>
+  `, {closable:false});
+  const optsWrap = document.getElementById('quizOpts');
+  function completeQuiz(correct, selectedButton, usedTranslator=false){
+    Array.from(optsWrap.children).forEach(c=>{ c.onclick=null; c.disabled=true; });
+    const translator = document.getElementById('useQuizTranslator');
+    if(translator) translator.disabled = true;
+    if(correct){
+      playSound('correct');
+      if(selectedButton) selectedButton.classList.add('correct');
+      else if(optsWrap.children[q.a]) optsWrap.children[q.a].classList.add('correct');
+      logMsg(`✅ ${p.name}이(가) ${usedTranslator ? '만능 우주 번역기로 ' : ''}우주 퀴즈 정답! 황금열쇠를 뽑습니다.`);
+    } else {
+      playSound('wrong');
+      selectedButton.classList.add('wrong');
+      optsWrap.children[q.a].classList.add('correct');
+      if(p.quizShields > 0){
+        p.quizShields--;
+        logMsg(`🛡️ ${p.name}이(가) 오답 보험권으로 벌금을 막았습니다.`);
+      } else {
+        p.money = Math.max(0, p.money - 50);
+        logMsg(`❌ ${p.name}이(가) 우주 퀴즈 오답. (-50G)`);
+      }
+    }
+    renderRail();
+    const answer = document.getElementById('spaceQuizAnswer');
+    answer.style.display = 'block';
+    answer.innerHTML = `<b>정답</b> · ${q.opts[q.a]}${correct ? '<br>정답 보상으로 황금열쇠를 뽑습니다.' : '<br>오답이면 황금열쇠를 뽑지 않습니다.'}`;
+    const nextLabel = p.money <= 0 ? '결과 확인' : correct ? '황금열쇠 뽑기' : '다음 차례로';
+    document.getElementById('spaceQuizNext').innerHTML = `<button class="btn btn-amber btn-block" id="spaceQuizContinue">${nextLabel}</button>`;
+    document.getElementById('spaceQuizContinue').onclick = ()=>{
+      closeModal();
+      if(p.money <= 0){ goBankrupt(p); finishStep(p, isDouble); return; }
+      if(correct) showGoldenKeyDraw(p, isDouble);
+      else finishStep(p, isDouble);
+    };
+  }
+  const quizTranslator = document.getElementById('useQuizTranslator');
+  if(quizTranslator) quizTranslator.onclick = ()=>{
+    p.successPasses--;
+    completeQuiz(true, null, true);
+  };
+  q.opts.forEach((opt,i)=>{
+    const b = document.createElement('button');
+    b.className = 'quiz-opt';
+    b.textContent = opt;
+    b.onclick = ()=>completeQuiz(i === q.a, b);
+    optsWrap.appendChild(b);
+  });
+}
+
+function showGoldenKeyDraw(p, isDouble){
+  const choices = [...GOLDEN_KEYS].sort(()=>Math.random() - .5).slice(0, 3);
+  showModal(`
+    <h3>🔑 황금열쇠</h3>
+    <p>뒤집힌 황금열쇠 카드 3장 중 한 장을 선택하세요.</p>
+    <div class="golden-choice-grid">
+      ${choices.map((card, index)=>`
+        <button class="golden-choice" data-card="${index}" aria-label="${index + 1}번 황금열쇠 카드 선택">
+          <span class="golden-choice-inner">
+            <span class="golden-choice-face golden-choice-back">
+              <span class="key-mark">🔑</span>
+              <b>${index + 1}번 카드</b>
+            </span>
+            <span class="golden-choice-face golden-choice-front">
+              <b>${card.title}</b>
+              <span>${card.desc}</span>
+            </span>
+          </span>
+        </button>
+      `).join('')}
+    </div>
+    <div id="goldenChoiceResult"></div>
+  `, {closable:false});
+  document.querySelectorAll('.golden-choice').forEach(button=>{
+    button.onclick = ()=>{
+      const card = choices[Number(button.dataset.card)];
+      document.querySelectorAll('.golden-choice').forEach(choice=>{
+        choice.disabled = true;
+        choice.onclick = null;
+      });
+      button.classList.add('flipped');
+      playSound('golden');
+      logMsg(`🔑 ${p.name}이(가) 황금열쇠를 뽑았습니다: ${card.title}`);
+      setTimeout(()=>{
+        resolveGoldenKey(p, card, isDouble);
+      }, 700);
+    };
+  });
+}
+
+function goldenResult(html){
+  document.getElementById('goldenChoiceResult').innerHTML = html;
+}
+
+function finishGoldenTurn(p, isDouble){
+  closeModal();
+  if(p.money <= 0) goBankrupt(p);
+  finishStep(p, isDouble);
+}
+
+function resolveGoldenKey(p, card, isDouble){
+  if(card.amount){
+    p.money = Math.max(0, p.money + card.amount);
+    logMsg(`${card.amount > 0 ? '💰' : '💸'} ${p.name}의 연구비가 ${Math.abs(card.amount)}G ${card.amount > 0 ? '늘었습니다' : '줄었습니다'}.`);
+    renderRail();
+    goldenResult(`
+      <div class="modal-amount ${card.amount > 0 ? 'pos' : 'neg'}">${card.amount > 0 ? '+' : ''}${card.amount}G</div>
+      <button class="btn btn-amber btn-block" id="goldenKeyOk">확인</button>
+    `);
+    document.getElementById('goldenKeyOk').onclick = ()=>finishGoldenTurn(p, isDouble);
+    return;
+  }
+
+  if(card.collectAll){
+    let received = 0;
+    players.filter(other=>other !== p && !other.bankrupt).forEach(other=>{
+      const paid = Math.min(card.collectAll, other.money);
+      other.money -= paid;
+      p.money += paid;
+      received += paid;
+      logMsg(`🧹 ${other.name}이(가) ${p.name}에게 ${paid}G를 전달했습니다.`);
+    });
+    renderRail();
+    goldenResult(`<div class="modal-amount pos">+${received}G</div><button class="btn btn-amber btn-block" id="goldenKeyOk">확인</button>`);
+    document.getElementById('goldenKeyOk').onclick = ()=>finishGoldenTurn(p, isDouble);
+    return;
+  }
+
+  if(card.tollPasses || card.successPasses || card.blackHolePasses){
+    if(card.tollPasses) p.tollPasses += card.tollPasses;
+    if(card.successPasses) p.successPasses += card.successPasses;
+    if(card.blackHolePasses) p.blackHolePasses += card.blackHolePasses;
+    renderRail();
+    goldenResult(`<div class="answer-box"><b>아이템을 보관했습니다.</b><br>${card.desc}</div><button class="btn btn-amber btn-block" id="goldenKeyOk">확인</button>`);
+    document.getElementById('goldenKeyOk').onclick = ()=>finishGoldenTurn(p, isDouble);
+    return;
+  }
+
+  if(card.moveToEmptyPlanet){
+    const emptyPlanets = PLANETS.filter(planet=>getOwnerIndex(planet.key) === -1);
+    if(!emptyPlanets.length){
+      goldenResult(`<div class="answer-box">현재 주인 없는 행성이 없습니다. 이동하지 않습니다.</div><button class="btn btn-amber btn-block" id="goldenKeyOk">확인</button>`);
+      document.getElementById('goldenKeyOk').onclick = ()=>finishGoldenTurn(p, isDouble);
+      return;
+    }
+    goldenResult(`
+      <div class="answer-box"><b>이동할 빈 행성을 선택하세요.</b><br>출발지를 지나도 보너스는 받지 않습니다.</div>
+      <div id="goldenPlanetChoices"></div>
+    `);
+    const wrap = document.getElementById('goldenPlanetChoices');
+    emptyPlanets.forEach(planet=>{
+      const button = document.createElement('button');
+      button.className = 'quiz-opt';
+      button.textContent = `${planet.icon} ${planet.name}`;
+      button.onclick = ()=>{
+        p.position = BOARD.findIndex(tile=>tile.type === 'planet' && tile.planet.key === planet.key);
+        logMsg(`🌀 ${p.name}이(가) 웜홀을 타고 ${planet.name}(으)로 이동했습니다.`);
+        renderTokens();
+        renderRail();
+        closeModal();
+        setTimeout(()=>resolveTile(p, isDouble), ARRIVAL_PAUSE_MS);
+      };
+      wrap.appendChild(button);
+    });
+    return;
+  }
+
+  if(card.moveBack){
+    goldenResult(`<div class="answer-box">뒤로 ${card.moveBack}칸 이동합니다.</div><button class="btn btn-amber btn-block" id="goldenMoveBack">이동하기</button>`);
+    document.getElementById('goldenMoveBack').onclick = ()=>{
+      closeModal();
+      movePlayerBackward(p, card.moveBack, isDouble);
+    };
+    return;
+  }
+
+  if(card.moveToStation){
+    p.position = BOARD.findIndex(tile=>tile.type === 'station');
+    p.skipTurn = true;
+    logMsg(`📡 ${p.name}이(가) 우주 정거장으로 이동했습니다. 다음 차례에 쉽니다.`);
+    renderTokens();
+    renderRail();
+    goldenResult(`<div class="answer-box">우주 정거장으로 이동했습니다.<br><b>다음 차례는 휴식합니다.</b></div><button class="btn btn-amber btn-block" id="goldenKeyOk">확인</button>`);
+    document.getElementById('goldenKeyOk').onclick = ()=>finishGoldenTurn(p, isDouble);
+    return;
+  }
+
+  if(card.summonPoorest){
+    const candidates = players.filter(other=>other !== p && !other.bankrupt);
+    const poorest = candidates.sort((a,b)=>a.money-b.money)[0];
+    if(poorest){
+      poorest.position = p.position;
+      logMsg(`🆘 ${p.name}이(가) ${poorest.name}을(를) 같은 칸으로 불렀습니다.`);
+      renderTokens();
+      renderRail();
+      goldenResult(`<div class="answer-box">현재 연구비가 가장 적은 <b>${poorest.name}</b>이(가) 내 칸으로 이동했습니다.</div><button class="btn btn-amber btn-block" id="goldenKeyOk">확인</button>`);
+    } else {
+      goldenResult(`<div class="answer-box">불러올 다른 플레이어가 없습니다.</div><button class="btn btn-amber btn-block" id="goldenKeyOk">확인</button>`);
+    }
+    document.getElementById('goldenKeyOk').onclick = ()=>finishGoldenTurn(p, isDouble);
+    return;
+  }
+
+  if(card.action === 'dance'){
+    goldenResult(`
+      <div class="answer-box"><b>무중력 춤을 5초 동안 춰 보세요!</b></div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-ghost" style="flex:1;" id="danceSkip">하지 않기 -30G</button>
+        <button class="btn btn-amber" style="flex:1;" id="danceDone">춤 성공 +100G</button>
+      </div>
+    `);
+    document.getElementById('danceDone').onclick = ()=>completeGoldenAction(p, 100, '무중력 우주 댄스 성공', isDouble);
+    document.getElementById('danceSkip').onclick = ()=>completeGoldenAction(p, -30, '무중력 우주 댄스를 하지 않았습니다', isDouble);
+    return;
+  }
+
+  if(card.action === 'greeting'){
+    goldenResult(`<div class="answer-box">양쪽 집게손가락을 머리 위에 올리고<br><b>“삐리삐리 뽀로뽀로!”</b>라고 인사하세요.</div><button class="btn btn-amber btn-block" id="greetingDone">인사 완료 +50G</button>`);
+    document.getElementById('greetingDone').onclick = ()=>completeGoldenAction(p, 50, '외계인 교신 성공', isDouble);
+    return;
+  }
+
+  if(card.action === 'asteroid'){
+    const targets = players.filter(other=>other !== p && !other.bankrupt);
+    if(!targets.length){
+      goldenResult(`<div class="answer-box">함께 방어 자세를 취할 다른 플레이어가 없습니다.</div><button class="btn btn-amber btn-block" id="goldenKeyOk">확인</button>`);
+      document.getElementById('goldenKeyOk').onclick = ()=>finishGoldenTurn(p, isDouble);
+      return;
+    }
+    goldenResult(`<div class="answer-box"><b>“으악, 꽉 잡아!”</b>라고 외치고 3초 동안 방어 자세를 취하세요.<br>가장 늦은 사람을 선택하세요.</div><div id="asteroidTargets"></div>`);
+    const wrap = document.getElementById('asteroidTargets');
+    targets.forEach(target=>{
+      const button = document.createElement('button');
+      button.className = 'quiz-opt';
+      button.textContent = `${target.name}에게서 30G 받기`;
+      button.onclick = ()=>{
+        const paid = Math.min(30, target.money);
+        target.money -= paid;
+        p.money += paid;
+        logMsg(`☄️ ${p.name}이(가) ${target.name}에게서 ${paid}G를 받았습니다.`);
+        renderRail();
+        finishGoldenTurn(p, isDouble);
+      };
+      wrap.appendChild(button);
+    });
+    return;
+  }
+}
+
+function completeGoldenAction(p, amount, message, isDouble){
+  p.money = Math.max(0, p.money + amount);
+  logMsg(`🎭 ${p.name}: ${message} (${amount > 0 ? '+' : ''}${amount}G)`);
+  renderRail();
+  finishGoldenTurn(p, isDouble);
+}
+
+/* ============ JOURNAL PANEL ============ */
+function renderJournal(){}
+function renderJournalQuiz(){}
+
+function showObservationArchive(){
+  const planetRecords = PLANETS
+    .map(planet => observationRecords[planet.key])
+    .filter(Boolean);
+  const bodyRecords = CELESTIALS
+    .map(body => bodyObservationRecords[body.key])
+    .filter(Boolean);
+  const planetContent = planetRecords.map(record=>`
+    <div class="journal-record">
+      <b>${record.name}</b> · ${record.observer} 기록<br>
+      태양에서 ${record.order}번째 · ${record.composition} 행성 · ${record.ring ? '고리 있음' : '고리 없음'}<br>
+      색깔: ${record.colorText}<br>
+      ${record.desc}
+    </div>
+  `).join('');
+  const bodyContent = bodyRecords.map(record=>`
+    <div class="journal-record">
+      <b>${record.name}</b> · ${record.observer} 기록<br>
+      ${record.category}<br>
+      특징: ${record.feature}<br>
+      ${record.desc}
+    </div>
+  `).join('');
+  const content = planetContent || bodyContent ? `${planetContent}${bodyContent}` : '<p>아직 완성한 관측 기록이 없습니다.</p>';
+  showModal(`
+    <h3>관측기록장</h3>
+    ${content}
+    <button class="btn btn-amber btn-block" id="closeJournalArchive">닫기</button>
+  `, {closable:false});
+  document.getElementById('closeJournalArchive').onclick = closeModal;
+}
+function lighten(hex){
+  // rough lighten for radial highlight
+  const num = parseInt(hex.replace('#',''),16);
+  let r = (num>>16)+60, g=((num>>8)&0xff)+60, b=(num&0xff)+60;
+  r=Math.min(255,r); g=Math.min(255,g); b=Math.min(255,b);
+  return `rgb(${r},${g},${b})`;
+}
+
+/* ============ MODAL ============ */
+const backdrop = document.getElementById('modalBackdrop');
+const modalCard = document.getElementById('modalCard');
+function showModal(html){
+  modalCard.innerHTML = html;
+  backdrop.style.display = 'flex';
+}
+function closeModal(){
+  backdrop.style.display = 'none';
+  modalCard.innerHTML = '';
+}
+</script>
+</body>
+</html>
