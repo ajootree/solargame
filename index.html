@@ -230,10 +230,10 @@
   }
   .board{
     display:grid;
-    grid-template-columns: repeat(10, 1fr);
-    grid-template-rows: repeat(7, 1fr);
+    grid-template-columns: repeat(9, 1fr);
+    grid-template-rows: repeat(6, 1fr);
     gap: 4px;
-    aspect-ratio: 11/7;
+    aspect-ratio: 3/2;
     position: relative;
     max-width: 100%;
     max-height: 100%;
@@ -249,8 +249,8 @@
     overflow:hidden;
     cursor: default;
   }
-  .tile .tk{ font-size: 9.6px; font-weight:700; text-align:center; line-height:1.16; color: var(--star); }
-  .tile .ti{ font-size: 15px; margin-bottom:1px; }
+  .tile .tk{ font-size: 10.5px; font-weight:700; text-align:center; line-height:1.16; color: var(--star); }
+  .tile .ti{ font-size: 17px; margin-bottom:1px; }
   .tile.planet{ border-bottom: 3px solid var(--planet-color); }
   .tile.planet .tk{ color: #fff; }
   .tile.body{ background: rgba(111,207,151,.1); border-color: rgba(111,207,151,.35); }
@@ -274,17 +274,17 @@
   .tile .price-tag{
     position:absolute; right:3px; bottom:3px; z-index:2;
     padding:2px 4px; border-radius:4px; background:rgba(232,163,61,.92);
-    color:#241600; font-size:8.5px; font-weight:900; line-height:1.15;
+    color:#241600; font-size:9.5px; font-weight:900; line-height:1.15;
     box-shadow:0 1px 4px rgba(0,0,0,.45);
   }
   .planet-photo{
-    display:block; width:min(46px, 82%); height:calc(100% - 12px); max-height:44px;
+    display:block; width:min(54px, 84%); height:calc(100% - 12px); max-height:52px;
     margin-bottom:10px;
     object-fit:contain; filter:drop-shadow(0 2px 5px rgba(0,0,0,.72));
   }
   .planet-photo.saturn{ width:min(64px, 96%); }
   .body-photo{
-    display:block; width:min(46px, 82%); height:40px; margin-bottom:2px;
+    display:block; width:min(52px, 84%); height:46px; margin-bottom:2px;
     object-fit:contain; filter:drop-shadow(0 2px 5px rgba(0,0,0,.72));
   }
   .body-photo.sun{ filter:drop-shadow(0 0 7px rgba(255,224,139,.5)); }
@@ -297,7 +297,7 @@
     margin-right:8px; filter:drop-shadow(0 2px 4px rgba(0,0,0,.35));
   }
   .board-center{
-    grid-column: 2 / 10; grid-row: 2 / 7;
+    grid-column: 2 / 9; grid-row: 2 / 6;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     gap: 14px;
     background: radial-gradient(circle, rgba(232,163,61,.06), transparent 70%);
@@ -639,8 +639,8 @@
 <script>
 /* ============ DATA ============ */
 const PLAYER_COLORS = ['#E8A33D','#6FCF97','#7FD8CE','#E0637A','#6E8FE8','#B06FD3'];
-const BOARD_COLS = 10;
-const BOARD_ROWS = 7;
+const BOARD_COLS = 9;
+const BOARD_ROWS = 6;
 const BOARD_TILE_COUNT = (BOARD_COLS + BOARD_ROWS) * 2 - 4;
 const MOVE_STEP_MS = 430;
 const ARRIVAL_PAUSE_MS = 450;
@@ -798,7 +798,6 @@ const GOLDEN_KEYS = [
   {title:'태양풍에 날아간 지갑', desc:'우주선 밖을 구경하다 연구비 일부를 잃었습니다. -30G', amount:-30},
   {title:'초고속 웜홀 발견!', desc:'원하는 주인 없는 행성으로 즉시 이동합니다. 출발지 보너스는 없습니다.', moveToEmptyPlanet:true},
   {title:'우주선 부스터 고장!', desc:'뒤로 3칸 이동하며 궤도를 수정합니다.', moveBack:3},
-  {title:'우주 정거장으로 텔레포트', desc:'우주 정거장으로 즉시 이동하고 다음 차례에 쉽니다.', moveToStation:true},
   {title:'SOS 구조 요청!', desc:'현재 연구비가 가장 적은 플레이어를 내 칸으로 불러옵니다.', summonPoorest:true},
   {title:'최신형 우주 은신 망토', desc:'보관 가능. 다음 남의 행성 기지 통행료를 1회 면제받습니다.', tollPasses:1},
   {title:'만능 우주 번역기', desc:'보관 가능. 우주 퀴즈나 말하기 미션을 1회 무조건 성공 처리합니다.', successPasses:1},
@@ -809,17 +808,16 @@ const GOLDEN_KEYS = [
 ];
 
 /* ===== Board index -> tile type ===== */
-// special corners: 0 start, 6 blackhole, 16 station
-const PLANET_SLOTS = [1,3,5,8,10,12,14,15];
-const BODY_SLOTS = [7,18,22,25];
-const MISSION_SLOTS = [4,11,20,26,28];
-const QUIZ_SLOTS = [2,9,13,17,19,21,23,24,27,29];
+// 9x6 perimeter: planets are spread evenly at intervals of 3-4 tiles.
+const PLANET_SLOTS = [1,4,7,10,13,16,19,23];
+const BODY_SLOTS = [2,8,15,21];
+const MISSION_SLOTS = [5,11,17,24];
+const QUIZ_SLOTS = [3,6,9,14,18,20,22,25];
 
 function buildBoardData(){
   const data = new Array(BOARD_TILE_COUNT);
   data[0] = {type:'start', name:'출발지', icon:'🚩'};
-  data[6] = {type:'blackhole', name:'블랙홀', icon:'🕳️'};
-  data[16] = {type:'station', name:'우주 정거장', icon:'📡'};
+  data[12] = {type:'blackhole', name:'블랙홀', icon:'🕳️'};
   PLANET_SLOTS.forEach((idx,i)=>{
     const p = PLANETS[i];
     data[idx] = {type:'planet', name:p.name, icon:p.icon, planet:p};
@@ -838,7 +836,7 @@ function buildBoardData(){
 }
 const BOARD = buildBoardData();
 
-/* index -> {row,col} on 10x7 perimeter, start = bottom-left, counter-clockwise */
+/* index -> {row,col} on 9x6 perimeter, start = bottom-left, counter-clockwise */
 function indexToRC(i){
   const leftEnd = BOARD_ROWS - 1;
   const topEnd = leftEnd + BOARD_COLS - 1;
@@ -1757,7 +1755,6 @@ function arrivalText(p, d){
   if(d.type === 'quiz') return '태양계 구성원과 행성 특징을 확인하는 퀴즈로 이동합니다.';
   if(d.type === 'mission') return '말로 설명하고 정답 확인까지 할 수 있는 태양계 미션입니다.';
   if(d.type === 'blackhole') return '블랙홀에 빠졌습니다. 다음 차례에 행성 O/X 문제를 맞히면 바로 탈출할 수 있습니다.';
-  if(d.type === 'station') return '우주 정거장에서 통신과 장비를 점검합니다.';
   return '출발지에 도착했습니다.';
 }
 
@@ -1779,10 +1776,6 @@ function continueTileAction(p, d, isDouble){
       renderRail();
       setTimeout(nextTurn, 700);
     }
-  }
-  else if(d.type === 'station'){
-    logMsg(`📡 ${p.name}이(가) 우주 정거장에 도착했습니다. 안전하게 통신을 점검하고 다음 턴을 준비합니다.`);
-    finishStep(p, isDouble);
   }
   else if(d.type === 'planet'){
     if(!observationRecords[d.planet.key]){
@@ -2540,17 +2533,6 @@ function resolveGoldenKey(p, card, isDouble){
       closeModal();
       movePlayerBackward(p, card.moveBack, isDouble);
     };
-    return;
-  }
-
-  if(card.moveToStation){
-    p.position = BOARD.findIndex(tile=>tile.type === 'station');
-    p.skipTurn = true;
-    logMsg(`📡 ${p.name}이(가) 우주 정거장으로 이동했습니다. 다음 차례에 쉽니다.`);
-    renderTokens();
-    renderRail();
-    goldenResult(`<div class="answer-box">우주 정거장으로 이동했습니다.<br><b>다음 차례는 휴식합니다.</b></div><button class="btn btn-amber btn-block" id="goldenKeyOk">확인</button>`);
-    document.getElementById('goldenKeyOk').onclick = ()=>finishGoldenTurn(p, isDouble);
     return;
   }
 
