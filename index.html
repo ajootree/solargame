@@ -162,6 +162,7 @@
     border-radius:6px; background:rgba(255,255,255,.045);
   }
   .finance-label{ display:block; color:var(--star-dim); font-size:10.5px; margin-bottom:2px; }
+  .finance-rate{ color:var(--amber); font-size:9.5px; font-weight:700; }
   .finance-value{
     display:block; font-family:'Jua'; font-size:17px; color:var(--star);
     white-space:nowrap;
@@ -265,9 +266,20 @@
     font-size: 8.5px; font-weight:900; color:#fff;
     text-shadow: 0 1px 2px rgba(0,0,0,.7);
   }
-  .tile .price-tag{ font-size: 8.5px; color: var(--amber); }
+  .tile.planet .tk{
+    position:absolute; left:3px; bottom:3px; z-index:2;
+    padding:2px 4px; border-radius:4px; background:rgba(5,8,22,.84);
+    text-shadow:0 1px 2px #000;
+  }
+  .tile .price-tag{
+    position:absolute; right:3px; bottom:3px; z-index:2;
+    padding:2px 4px; border-radius:4px; background:rgba(232,163,61,.92);
+    color:#241600; font-size:8.5px; font-weight:900; line-height:1.15;
+    box-shadow:0 1px 4px rgba(0,0,0,.45);
+  }
   .planet-photo{
-    display:block; width:min(46px, 82%); height:40px; margin-bottom:2px;
+    display:block; width:min(46px, 82%); height:calc(100% - 12px); max-height:44px;
+    margin-bottom:10px;
     object-fit:contain; filter:drop-shadow(0 2px 5px rgba(0,0,0,.72));
   }
   .planet-photo.saturn{ width:min(64px, 96%); }
@@ -1122,7 +1134,7 @@ function beginGame(names, rule){
   players = names.map((name,i)=>({
     name, color: PLAYER_COLORS[i], money: 1500, position: 0, laps:0,
     owned: [], baseStages: {}, tollPasses:0, quizShields:0, successPasses:0,
-    blackHolePasses:0, jailTurns:0, bankrupt:false, skipTurn:false
+    blackHolePasses:0, baseValueMultiplier:1, jailTurns:0, bankrupt:false, skipTurn:false
   }));
   currentIdx = 0;
   observationRecords = {};
@@ -1331,7 +1343,7 @@ function renderRail(){
           <strong class="finance-value">${p.money.toLocaleString()}G</strong>
         </div>
         <div class="finance-part">
-          <span class="finance-label">기지 자산</span>
+          <span class="finance-label">기지 자산 <small class="finance-rate">시세 ${Math.round((p.baseValueMultiplier || 1) * 100)}%</small></span>
           <strong class="finance-value">${baseAssetValue(p).toLocaleString()}G</strong>
         </div>
         <div class="finance-total">
@@ -1436,11 +1448,12 @@ function nextTurn(){
 }
 
 function baseAssetValue(player){
-  return player.owned.reduce((sum, key)=>{
+  const investedValue = player.owned.reduce((sum, key)=>{
     const planet = PLANETS.find(item=>item.key === key);
     if(!planet) return sum;
     return sum + planet.price + (getBaseStage(player, key) === 2 ? upgradeCost(planet) : 0);
   }, 0);
+  return Math.round(investedValue * (player.baseValueMultiplier || 1));
 }
 
 function totalAssets(player){
@@ -1630,15 +1643,48 @@ function movePlayer(p, steps, isDouble){
 
     if(token) token.classList.remove('moving');
     if(passedStart){
+      const previousRate = p.baseValueMultiplier || 1;
+      const previousBaseValue = baseAssetValue(p);
       p.laps++;
       p.money += PASS_START_BONUS;
+      p.baseValueMultiplier = Number((previousRate * 1.1).toFixed(6));
+      const increasedBaseValue = baseAssetValue(p);
       logMsg(`🚩 ${p.name}이(가) ${p.laps}바퀴를 완주하고 연구 지원금 ${PASS_START_BONUS}G를 받았습니다.`);
+      logMsg(`📈 ${p.name}의 기지 가치 지수가 10% 상승했습니다. (${Math.round(previousRate * 100)}% → ${Math.round(p.baseValueMultiplier * 100)}%)`);
+      renderRail();
+      setTimeout(()=>{
+        showLapCompletionNotice(p, previousRate, previousBaseValue, increasedBaseValue, ()=>resolveTile(p, isDouble));
+      }, ARRIVAL_PAUSE_MS);
+      return;
     }
     renderRail();
     setTimeout(()=> resolveTile(p, isDouble), ARRIVAL_PAUSE_MS);
   }
 
   stepForward();
+}
+
+function showLapCompletionNotice(p, previousRate, previousBaseValue, increasedBaseValue, onDone){
+  playSound('golden');
+  const increase = increasedBaseValue - previousBaseValue;
+  const assetMessage = p.owned.length
+    ? `기지 자산 ${previousBaseValue.toLocaleString()}G → ${increasedBaseValue.toLocaleString()}G <b>(+${increase.toLocaleString()}G)</b>`
+    : '현재 보유 기지는 없지만 이후 기지 자산 평가에 상승 지수가 적용됩니다.';
+  showModal(`
+    <h3>🚩 ${p.laps}바퀴 완주!</h3>
+    <p><b>${p.name}</b> 원정대에 연구 지원금이 들어옵니다.</p>
+    <div class="modal-amount pos">+${PASS_START_BONUS}G</div>
+    <div class="answer-box">
+      <b>기지 가치 지수 +10%</b><br>
+      ${Math.round(previousRate * 100)}% → ${Math.round(p.baseValueMultiplier * 100)}%<br>
+      ${assetMessage}
+    </div>
+    <button class="btn btn-amber btn-block" id="lapNoticeOk">도착 칸 확인</button>
+  `, {closable:false});
+  document.getElementById('lapNoticeOk').onclick = ()=>{
+    closeModal();
+    onDone();
+  };
 }
 
 function movePlayerBackward(p, steps, isDouble){
@@ -1776,16 +1822,13 @@ function finishStep(p, isDouble){
 }
 
 function goBankrupt(p){
-  const donated = p.owned.reduce((sum,key)=>{
-    const planet = PLANETS.find(item=>item.key === key);
-    if(!planet) return sum;
-    return sum + planet.price + (getBaseStage(p, key) === 2 ? upgradeCost(planet) : 0);
-  }, 0);
+  const donated = baseAssetValue(p);
   p.bankrupt = true;
   p.money = 0;
   p.owned = [];
   p.baseStages = {};
-  const donationText = donated > 0 ? `기지 투자금 ${donated.toLocaleString()}G는 우주 발전을 위해 사용됩니다.` : '보유한 기지는 없습니다.';
+  p.baseValueMultiplier = 1;
+  const donationText = donated > 0 ? `기지 자산 ${donated.toLocaleString()}G는 우주 발전을 위해 사용됩니다.` : '보유한 기지는 없습니다.';
   logMsg(`💥 ${p.name} 원정대의 예산이 바닥나 파산했습니다. ${donationText}`);
   renderTileMarkers();
   renderRail();
