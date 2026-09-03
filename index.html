@@ -631,7 +631,7 @@
         <button type="button" class="mode-tab" data-mode="timer">제한 시간</button>
       </div>
       <div class="mode-config active" data-config="laps">
-        <label for="lapsTarget">먼저 완주하면 승리</label>
+        <label for="lapsTarget">완주자가 나오면 총자산으로 승리</label>
         <div class="lap-stepper">
           <button type="button" id="lapsMinus" aria-label="바퀴 수 줄이기">−</button>
           <output id="lapsOutput" for="lapsTarget">5바퀴</output>
@@ -1117,7 +1117,7 @@ document.getElementById('startGameBtn').addEventListener('click', ()=>{
 });
 
 function ruleDescription(rule){
-  if(rule.type === 'laps') return `${rule.target}바퀴를 먼저 완주하면 종료`;
+  if(rule.type === 'laps') return `누군가 ${rule.target}바퀴를 완주하면 즉시 총자산 순위로 종료`;
   return `${rule.target}분이 지나면 총자산 순위로 종료`;
 }
 
@@ -1194,7 +1194,7 @@ function updateGameStatus(){
     return;
   }
   if(gameRule.type === 'laps'){
-    status.textContent = `완주 목표 · ${gameRule.target}바퀴 먼저 도착`;
+    status.textContent = `종료 목표 · ${gameRule.target}바퀴 완주 시 총자산 비교`;
     return;
   }
   if(timeExpired){
@@ -1477,14 +1477,12 @@ function totalAssets(player){
 
 function rankingForRule(){
   return [...players].sort((a,b)=>{
-    if(gameRule.type === 'laps') return b.laps - a.laps || totalAssets(b) - totalAssets(a);
     return totalAssets(b) - totalAssets(a) || b.money - a.money;
   });
 }
 
 function rankingValue(player){
-  if(gameRule.type === 'laps') return `${player.laps}바퀴 · ${totalAssets(player).toLocaleString()}G`;
-  return `총자산 ${totalAssets(player).toLocaleString()}G`;
+  return `${player.laps}바퀴 · 총자산 ${totalAssets(player).toLocaleString()}G`;
 }
 
 function endGame(reason, winner=null){
@@ -1536,8 +1534,8 @@ function checkWin(){
     requestRoundEnd('제한 시간이 끝났습니다. 현금과 기지 가치를 합친 총자산으로 순위를 정했습니다.');
   }
   if(gameRule.type === 'laps'){
-    const winner = players.find(player=>!player.bankrupt && player.laps >= gameRule.target);
-    if(winner && !roundEndPending) requestRoundEnd(`${gameRule.target}바퀴를 먼저 완주했습니다.`, winner);
+    const finisher = players.find(player=>!player.bankrupt && player.laps >= gameRule.target);
+    if(finisher) return endGame(`${finisher.name} 원정대가 ${gameRule.target}바퀴를 완주했습니다. 이 시점의 총자산으로 순위를 정했습니다.`);
   }
   const alive = players.filter(p=>!p.bankrupt);
   if(alive.length === 1 && players.length > 1){
@@ -1668,7 +1666,13 @@ function movePlayer(p, steps, isDouble){
       logMsg(`📈 ${p.name}의 기지 가치 지수가 10% 상승했습니다. (${Math.round(previousRate * 100)}% → ${Math.round(p.baseValueMultiplier * 100)}%)`);
       renderRail();
       setTimeout(()=>{
-        showLapCompletionNotice(p, previousRate, previousBaseValue, increasedBaseValue, ()=>resolveTile(p, isDouble));
+        showLapCompletionNotice(p, previousRate, previousBaseValue, increasedBaseValue, ()=>{
+          if(gameRule.type === 'laps' && p.laps >= gameRule.target){
+            endGame(`${p.name} 원정대가 ${gameRule.target}바퀴를 완주했습니다. 이 시점의 총자산으로 순위를 정했습니다.`);
+            return;
+          }
+          resolveTile(p, isDouble);
+        });
       }, ARRIVAL_PAUSE_MS);
       return;
     }
@@ -1681,6 +1685,7 @@ function movePlayer(p, steps, isDouble){
 
 function showLapCompletionNotice(p, previousRate, previousBaseValue, increasedBaseValue, onDone){
   playSound('golden');
+  const finishesGame = gameRule.type === 'laps' && p.laps >= gameRule.target;
   const increase = increasedBaseValue - previousBaseValue;
   const assetMessage = p.owned.length
     ? `기지 자산 ${previousBaseValue.toLocaleString()}G → ${increasedBaseValue.toLocaleString()}G <b>(+${increase.toLocaleString()}G)</b>`
@@ -1694,7 +1699,7 @@ function showLapCompletionNotice(p, previousRate, previousBaseValue, increasedBa
       ${Math.round(previousRate * 100)}% → ${Math.round(p.baseValueMultiplier * 100)}%<br>
       ${assetMessage}
     </div>
-    <button class="btn btn-amber btn-block" id="lapNoticeOk">도착 칸 확인</button>
+    <button class="btn btn-amber btn-block" id="lapNoticeOk">${finishesGame ? '최종 결과 확인' : '도착 칸 확인'}</button>
   `, {closable:false});
   document.getElementById('lapNoticeOk').onclick = ()=>{
     closeModal();
