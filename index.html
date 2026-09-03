@@ -304,9 +304,9 @@
     border-radius: 12px;
   }
   .center-title{ font-family:'Jua'; font-size: clamp(16px,2vw,22px); color: var(--star-dim); text-align:center; letter-spacing:1px;}
-  .dice-row{ display:flex; gap:14px; }
+  .dice-row{ display:flex; gap:18px; }
   .die{
-    width: 54px; height:54px; border-radius: 12px;
+    width: 70px; height:70px; border-radius: 14px;
     background: linear-gradient(160deg,#fff,#dcdcec);
     box-shadow: 0 6px 16px rgba(0,0,0,.4);
     display:grid;
@@ -317,7 +317,7 @@
       "ml mc mr"
       "bl .  br";
     gap: 2px;
-    padding: 9px;
+    padding: 11px;
   }
   .die.rolling{ animation: dieShake .11s linear infinite; }
   @keyframes dieShake{
@@ -326,7 +326,7 @@
     100%{ transform: rotate(-10deg) scale(1); }
   }
   .pip{
-    width: 9px; height:9px; border-radius:50%;
+    width: 11px; height:11px; border-radius:50%;
     background:#1E2333; align-self:center; justify-self:center;
     opacity:0; transform: scale(.4); transition: opacity .08s ease, transform .08s ease;
   }
@@ -334,6 +334,13 @@
   .pip-tl{ grid-area: tl; } .pip-tr{ grid-area: tr; }
   .pip-ml{ grid-area: ml; } .pip-mc{ grid-area: mc; } .pip-mr{ grid-area: mr; }
   .pip-bl{ grid-area: bl; } .pip-br{ grid-area: br; }
+  #turnPrompt{ width:100%; text-align:center; }
+  #rollBtn{
+    min-width: 250px;
+    padding: 14px 24px;
+    font-size: 20px;
+    box-shadow: 0 7px 16px rgba(0,0,0,.28);
+  }
   .turn-log{
     width: 100%;
     background: rgba(0,0,0,.3);
