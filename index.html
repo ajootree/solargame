@@ -631,7 +631,7 @@
         <button type="button" class="mode-tab" data-mode="timer">제한 시간</button>
       </div>
       <div class="mode-config active" data-config="laps">
-        <label for="lapsTarget">완주 후 굴림 횟수를 맞추고 총자산 승리</label>
+        <label for="lapsTarget">완주 후 차례 횟수를 맞추고 총자산 승리</label>
         <div class="lap-stepper">
           <button type="button" id="lapsMinus" aria-label="바퀴 수 줄이기">−</button>
           <output id="lapsOutput" for="lapsTarget">5바퀴</output>
@@ -1117,7 +1117,7 @@ document.getElementById('startGameBtn').addEventListener('click', ()=>{
 });
 
 function ruleDescription(rule){
-  if(rule.type === 'laps') return `누군가 ${rule.target}바퀴를 완주하면 전원의 굴림 횟수를 맞춘 뒤 총자산 순위로 종료`;
+  if(rule.type === 'laps') return `누군가 ${rule.target}바퀴를 완주하면 전원의 차례 횟수를 맞춘 뒤 총자산 순위로 종료`;
   return `${rule.target}분이 지나면 총자산 순위로 종료`;
 }
 
@@ -1147,7 +1147,7 @@ function beginGame(names, rule){
   timeExpired = false;
   roundEndPending = null;
   players = names.map((name,i)=>({
-    name, color: PLAYER_COLORS[i], money: 1500, position: 0, laps:0, rollCount:0,
+    name, color: PLAYER_COLORS[i], money: 1500, position: 0, laps:0, turnCount:0,
     owned: [], baseStages: {}, tollPasses:0, quizShields:0, successPasses:0,
     blackHolePasses:0, baseValueMultiplier:1, jailTurns:0, bankrupt:false, skipTurn:false
   }));
@@ -1191,7 +1191,7 @@ function updateGameStatus(){
   if(!status) return;
   if(roundEndPending){
     status.textContent = roundEndPending.type === 'laps'
-      ? `종료 조건 달성 · 전원 ${roundEndPending.targetRollCount}회까지 굴리기`
+      ? `종료 조건 달성 · 전원 ${roundEndPending.targetTurnCount}차례까지 진행`
       : '시간 종료 · 마지막 순서까지 진행';
     return;
   }
@@ -1377,7 +1377,7 @@ function renderRail(){
         ${p.quizShields ? `<span class="owned-chip">오답 보험 ${p.quizShields}</span>` : ''}
         ${p.successPasses ? `<span class="owned-chip">만능 번역기 ${p.successPasses}</span>` : ''}
         ${p.blackHolePasses ? `<span class="owned-chip">탈출 로켓 ${p.blackHolePasses}</span>` : ''}
-        ${gameRule.type === 'laps' ? `<span class="owned-chip">완주 ${p.laps}바퀴 · 굴림 ${p.rollCount}회</span>` : ''}
+        ${gameRule.type === 'laps' ? `<span class="owned-chip">완주 ${p.laps}바퀴 · 차례 ${p.turnCount}회</span>` : ''}
       </div>
       <div class="player-status">${status}</div>
     `;
@@ -1446,7 +1446,7 @@ function nextTurn(){
     endGame(roundEndPending.reason, roundEndPending.winner);
     return;
   }
-  if(roundEndPending?.type === 'laps' && rollCountsAligned()){
+  if(roundEndPending?.type === 'laps' && turnCountsAligned()){
     endGame(roundEndPending.reason);
     return;
   }
@@ -1456,7 +1456,7 @@ function nextTurn(){
     currentIdx = (currentIdx+1) % players.length;
     attempts++;
   } while((players[currentIdx].bankrupt ||
-    (roundEndPending?.type === 'laps' && players[currentIdx].rollCount >= roundEndPending.targetRollCount)) &&
+    (roundEndPending?.type === 'laps' && players[currentIdx].turnCount >= roundEndPending.targetTurnCount)) &&
     attempts <= players.length);
   if(roundEndPending?.type === 'laps' && attempts > players.length){
     endGame(roundEndPending.reason);
@@ -1541,23 +1541,23 @@ function requestRoundEnd(reason, winner=null){
   updateGameStatus();
 }
 
-function rollCountsAligned(){
+function turnCountsAligned(){
   if(roundEndPending?.type !== 'laps') return false;
   return players
     .filter(player=>!player.bankrupt)
-    .every(player=>player.rollCount >= roundEndPending.targetRollCount);
+    .every(player=>player.turnCount >= roundEndPending.targetTurnCount);
 }
 
 function requestLapEnd(finisher){
   if(roundEndPending) return;
   const activePlayers = players.filter(player=>!player.bankrupt);
-  const targetRollCount = Math.max(...activePlayers.map(player=>player.rollCount));
+  const targetTurnCount = Math.max(...activePlayers.map(player=>player.turnCount));
   roundEndPending = {
     type:'laps',
-    targetRollCount,
-    reason:`${finisher.name} 원정대가 ${gameRule.target}바퀴를 완주했습니다. 모든 참가자의 주사위 굴림 횟수를 ${targetRollCount}회로 맞춘 뒤 총자산으로 순위를 정했습니다.`,
+    targetTurnCount,
+    reason:`${finisher.name} 원정대가 ${gameRule.target}바퀴를 완주했습니다. 모든 참가자의 차례 횟수를 ${targetTurnCount}회로 맞춘 뒤 총자산으로 순위를 정했습니다.`,
   };
-  logMsg(`🏁 ${finisher.name}이(가) 목표 바퀴를 완주했습니다. 모두 ${targetRollCount}회까지 굴린 뒤 종료합니다.`);
+  logMsg(`🏁 ${finisher.name}이(가) 목표 바퀴를 완주했습니다. 모두 ${targetTurnCount}차례까지 진행한 뒤 종료합니다.`);
   updateGameStatus();
 }
 
@@ -1576,7 +1576,7 @@ function checkWin(){
   if(roundEndPending?.type === 'timer' && currentIdx >= roundEndPending.endIndex){
     return endGame(roundEndPending.reason, roundEndPending.winner);
   }
-  if(roundEndPending?.type === 'laps' && rollCountsAligned()) return endGame(roundEndPending.reason);
+  if(roundEndPending?.type === 'laps' && turnCountsAligned()) return endGame(roundEndPending.reason);
   return false;
 }
 
@@ -1624,6 +1624,7 @@ function handleRoll(){
   const rollBtn = document.getElementById('rollBtn');
   if(rollBtn) rollBtn.disabled = true;
   const p = currentPlayer();
+  if(doublesStreak === 0) p.turnCount = (p.turnCount || 0) + 1;
   const die1 = document.getElementById('die1');
   const die2 = document.getElementById('die2');
 
@@ -1639,7 +1640,6 @@ function handleRoll(){
     }
   }
 
-  p.rollCount = (p.rollCount || 0) + 1;
   playSound('dice');
   const d1 = 1+Math.floor(Math.random()*6);
   const d2 = 1+Math.floor(Math.random()*6);
