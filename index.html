@@ -457,6 +457,11 @@
     margin: 8px 0 14px;
   }
   .choice-grid.three{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .choice-grid.order-grid{
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+    margin: 6px 0 10px;
+  }
   .record-choice{
     border: 1px solid var(--paper-line);
     background: rgba(255,255,255,.55);
@@ -466,6 +471,11 @@
     font-family:'Jua';
     font-size: 14px;
     cursor:pointer;
+  }
+  .order-grid .record-choice{
+    padding: 8px 4px;
+    border-radius: 8px;
+    font-size: 13px;
   }
   .record-choice.selected{
     background: linear-gradient(180deg, var(--amber), var(--amber-deep));
@@ -1977,7 +1987,7 @@ function showObservationRecord(p, planet, onDone){
     <p>버튼을 눌러 ${planet.name}의 특징을 직접 기록하세요.</p>
 
     <div class="card-field"><div class="lb">태양에서 몇 번째로 가까울까요?</div></div>
-    <div class="choice-grid" data-group="order">
+    <div class="choice-grid order-grid" data-group="order">
       ${PLANETS.map(pl=>`<button class="record-choice" data-field="order" data-value="${pl.order}">${pl.order}번째</button>`).join('')}
     </div>
 
